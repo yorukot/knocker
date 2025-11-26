@@ -27,6 +27,8 @@ require (
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
+	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/jackc/pgx/v5 v5.7.6
