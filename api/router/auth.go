@@ -25,4 +25,6 @@ func AuthRouter(api *echo.Group, db *pgxpool.Pool) {
 	r.GET("/oauth/:provider/callback", authHandler.OAuthCallback)
 
 	r.POST("/register", authHandler.Register)
+	r.POST("/login", authHandler.Login)
+	r.POST("/refresh", authHandler.RefreshToken)
 }

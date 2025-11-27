@@ -103,7 +103,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction", err)
 	}
 
-	defer repository.DeferRollback(tx, c)
+	defer repository.DeferRollback(tx, c.Request().Context())
 
 	// Get the account and user by the provider and user ID for checking if the user is already linked/registered
 	account, user, err := repository.GetAccountWithUserByProviderUserID(c.Request().Context(), tx, provider, userInfo.Subject)
@@ -195,7 +195,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 
 	// Commit the transaction
-	if err := repository.CommitTransaction(tx, c); err != nil {
+	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 

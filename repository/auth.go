@@ -9,6 +9,36 @@ import (
 	"github.com/yorukot/knocker/models"
 )
 
+// GetUserByEmail retrieves a user by email address (through the accounts table)
+func GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+	query := `
+		SELECT u.id, u.password_hash, u.display_name, u.avatar, u.created_at, u.updated_at
+		FROM users u
+		JOIN accounts a ON u.id = a.user_id
+		WHERE a.email = $1 AND a.provider = $2
+		LIMIT 1`
+
+	var user models.User
+	err := tx.QueryRow(ctx, query, email, models.ProviderEmail).Scan(
+		&user.ID,
+		&user.PasswordHash,
+		&user.DisplayName,
+		&user.Avatar,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err == pgx.ErrNoRows {
+		return nil, nil // Not an error, just not found
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 // GetAccountByEmail retrieves an account by email address
 func GetAccountByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.Account, error) {
 	query := `SELECT id, provider, provider_user_id, user_id, email, created_at, updated_at
