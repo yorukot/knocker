@@ -1,5 +1,18 @@
 basePath: /api
 definitions:
+  auth.LoginRequest:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      password:
+        maxLength: 255
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
   auth.registerRequest:
     properties:
       display_name:
@@ -49,6 +62,42 @@ info:
   title: Ridash API
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user with email and password, returns a refresh
+        token cookie
+      parameters:
+      - description: Login request with email and password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful, refresh token set in cookie
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid request body or invalid credentials
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error (transaction, database, or password verification
+            failure)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "502":
+          description: Invalid request body format
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
   /auth/oauth/{provider}:
     get:
       description: Redirects user to OAuth provider for authentication
@@ -118,6 +167,32 @@ paths:
       summary: OAuth callback handler
       tags:
       - oauth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes the access token using the refresh token cookie, returns
+        a new access token and refresh token cookie
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Access token generated successfully, new refresh token set
+            in cookie
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "401":
+          description: Refresh token not found, invalid, or already used
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error (transaction, database, or token generation
+            failure)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Refresh token
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:
