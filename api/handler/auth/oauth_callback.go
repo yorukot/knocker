@@ -195,6 +195,12 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create refresh token")
 	}
 
+	accessTokenCookie, err := generateAccessTokenCookieForUser(userID)
+	if err != nil {
+		zap.L().Error("Failed to generate access token", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate access token")
+	}
+
 	// Commit the transaction
 	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
 		zap.L().Error("Failed to commit transaction", zap.Error(err))
@@ -204,6 +210,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	// Generate the refresh token cookie
 	refreshTokenCookie := generateRefreshTokenCookie(refreshToken)
 	c.SetCookie(&refreshTokenCookie)
+	c.SetCookie(&accessTokenCookie)
 
 	// Redirect to the redirect URI
 	return c.Redirect(http.StatusTemporaryRedirect, payload.RedirectURI)

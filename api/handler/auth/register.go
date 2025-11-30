@@ -85,6 +85,12 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate refresh token")
 	}
 
+	accessTokenCookie, err := generateAccessTokenCookieForUser(user.ID)
+	if err != nil {
+		zap.L().Error("Failed to generate access token", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate access token")
+	}
+
 	// Commit the transaction
 	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
 		zap.L().Error("Failed to commit transaction", zap.Error(err))
@@ -94,6 +100,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	// Generate the refresh token cookie
 	refreshTokenCookie := generateRefreshTokenCookie(refreshToken)
 	c.SetCookie(&refreshTokenCookie)
+	c.SetCookie(&accessTokenCookie)
 
 	// Respond with the success message
 	return c.JSON(http.StatusOK, response.SuccessMessage("User registered successfully"))

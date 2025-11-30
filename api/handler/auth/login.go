@@ -24,7 +24,7 @@ type LoginRequest struct {
 
 // Login godoc
 // @Summary User login
-// @Description Authenticates a user with email and password, returns a refresh token cookie
+// @Description Authenticates a user with email and password, sets refresh/access token cookies
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -86,12 +86,19 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate refresh token")
 	}
 
+	accessTokenCookie, err := generateAccessTokenCookieForUser(user.ID)
+	if err != nil {
+		zap.L().Error("Failed to generate access token", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate access token")
+	}
+
 	// Commit the transaction
 	repository.CommitTransaction(tx, c.Request().Context())
 
 	// Generate the refresh token cookie
 	refreshTokenCookie := generateRefreshTokenCookie(refreshToken)
 	c.SetCookie(&refreshTokenCookie)
+	c.SetCookie(&accessTokenCookie)
 
 	return c.JSON(http.StatusOK, response.SuccessMessage("Login successful"))
 }
