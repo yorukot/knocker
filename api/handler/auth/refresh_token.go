@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/config"
 	"github.com/yorukot/knocker/utils/encrypt"
 	"github.com/yorukot/knocker/utils/response"
@@ -34,15 +33,15 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	}
 
 	// Begin the transaction
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
 	// Get the refresh token by token
-	checkedRefreshToken, err := repository.GetRefreshTokenByToken(c.Request().Context(), tx, userRefreshToken.Value)
+	checkedRefreshToken, err := h.Repo.GetRefreshTokenByToken(c.Request().Context(), tx, userRefreshToken.Value)
 	if err != nil {
 		zap.L().Error("Failed to get refresh token by token", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get refresh token by token")
@@ -66,20 +65,20 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	// Update the refresh token used_at
 	now := time.Now()
 	checkedRefreshToken.UsedAt = &now
-	if err = repository.UpdateRefreshTokenUsedAt(c.Request().Context(), tx, *checkedRefreshToken); err != nil {
+	if err = h.Repo.UpdateRefreshTokenUsedAt(c.Request().Context(), tx, *checkedRefreshToken); err != nil {
 		zap.L().Error("Failed to update refresh token used_at", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update refresh token used_at")
 	}
 
 	// Generate new refresh token
-	newRefreshToken, err := generateTokenAndSaveRefreshToken(c, tx, checkedRefreshToken.UserID)
+	newRefreshToken, err := generateTokenAndSaveRefreshToken(c, h.Repo, tx, checkedRefreshToken.UserID)
 	if err != nil {
 		zap.L().Error("Failed to generate refresh token", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate refresh token")
 	}
 
 	// Commit the transaction
-	repository.CommitTransaction(tx, c.Request().Context())
+	h.Repo.CommitTransaction(tx, c.Request().Context())
 
 	// Generate the refresh token cookie
 	refreshTokenCookie := generateRefreshTokenCookie(newRefreshToken)

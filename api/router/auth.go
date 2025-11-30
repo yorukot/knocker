@@ -1,22 +1,22 @@
 package router
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/api/handler/auth"
 	"github.com/yorukot/knocker/api/middleware"
+	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/config"
 )
 
 // Auth router going to route register signin etc
-func AuthRouter(api *echo.Group, db *pgxpool.Pool) {
+func AuthRouter(api *echo.Group, repo repository.Repository) {
 	oauthConfig, err := config.GetOAuthConfig()
 	if err != nil {
 		panic("Failed to initialize OAuth config: " + err.Error())
 	}
 
 	authHandler := &auth.AuthHandler{
-		DB:          db,
+		Repo:        repo,
 		OAuthConfig: oauthConfig,
 	}
 	r := api.Group("/auth")

@@ -10,7 +10,7 @@ import (
 )
 
 // GetUserByEmail retrieves a user by email address (through the accounts table)
-func GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
+func (r *PGRepository) GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User, error) {
 	query := `
 		SELECT u.id, u.password_hash, u.display_name, u.avatar, u.created_at, u.updated_at
 		FROM users u
@@ -40,7 +40,7 @@ func GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.User,
 }
 
 // GetAccountByEmail retrieves an account by email address
-func GetAccountByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.Account, error) {
+func (r *PGRepository) GetAccountByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.Account, error) {
 	query := `SELECT id, provider, provider_user_id, user_id, email, created_at, updated_at
 	          FROM accounts
 	          WHERE email = $1
@@ -69,7 +69,7 @@ func GetAccountByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.Ac
 }
 
 // GetAccountWithUserByProviderUserID retrieves the account and its associated user
-func GetAccountWithUserByProviderUserID(ctx context.Context, db pgx.Tx, provider models.Provider, providerUserID string) (*models.Account, *models.User, error) {
+func (r *PGRepository) GetAccountWithUserByProviderUserID(ctx context.Context, db pgx.Tx, provider models.Provider, providerUserID string) (*models.Account, *models.User, error) {
 	query := `
 		SELECT
 			a.id AS "a.id", a.provider AS "a.provider", a.provider_user_id AS "a.provider_user_id", a.user_id AS "a.user_id",
@@ -96,7 +96,7 @@ func GetAccountWithUserByProviderUserID(ctx context.Context, db pgx.Tx, provider
 }
 
 // GetRefreshTokenByToken retrieves a refresh token by its token value
-func GetRefreshTokenByToken(ctx context.Context, tx pgx.Tx, token string) (*models.RefreshToken, error) {
+func (r *PGRepository) GetRefreshTokenByToken(ctx context.Context, tx pgx.Tx, token string) (*models.RefreshToken, error) {
 	query := `SELECT id, user_id, token, user_agent, ip, used_at, created_at
 	          FROM refresh_tokens
 	          WHERE token = $1
@@ -125,7 +125,7 @@ func GetRefreshTokenByToken(ctx context.Context, tx pgx.Tx, token string) (*mode
 }
 
 // CreateAccount creates a new account
-func CreateAccount(ctx context.Context, tx pgx.Tx, account models.Account) error {
+func (r *PGRepository) CreateAccount(ctx context.Context, tx pgx.Tx, account models.Account) error {
 	query := `INSERT INTO accounts (id, provider, provider_user_id, user_id, email, created_at, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
@@ -143,7 +143,7 @@ func CreateAccount(ctx context.Context, tx pgx.Tx, account models.Account) error
 }
 
 // CreateUserAndAccount creates a new user and associated account in a transaction
-func CreateUserAndAccount(ctx context.Context, tx pgx.Tx, user models.User, account models.Account) error {
+func (r *PGRepository) CreateUserAndAccount(ctx context.Context, tx pgx.Tx, user models.User, account models.Account) error {
 	// Insert user
 	userQuery := `INSERT INTO users (id, password_hash, display_name, avatar, created_at, updated_at)
 	              VALUES ($1, $2, $3, $4, $5, $6)`
@@ -181,7 +181,7 @@ func CreateUserAndAccount(ctx context.Context, tx pgx.Tx, user models.User, acco
 }
 
 // CreateOAuthToken creates a new OAuth token
-func CreateOAuthToken(ctx context.Context, db pgx.Tx, oauthToken models.OAuthToken) error {
+func (r *PGRepository) CreateOAuthToken(ctx context.Context, db pgx.Tx, oauthToken models.OAuthToken) error {
 	query := `
 		INSERT INTO oauth_tokens (
 			account_id,
@@ -218,7 +218,7 @@ func CreateOAuthToken(ctx context.Context, db pgx.Tx, oauthToken models.OAuthTok
 }
 
 // CreateRefreshToken creates a new refresh token in the database
-func CreateRefreshToken(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error {
+func (r *PGRepository) CreateRefreshToken(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error {
 	query := `INSERT INTO refresh_tokens (id, user_id, token, user_agent, ip, used_at, created_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
@@ -236,7 +236,7 @@ func CreateRefreshToken(ctx context.Context, tx pgx.Tx, token models.RefreshToke
 }
 
 // UpdateRefreshTokenUsedAt updates the used_at timestamp for a refresh token
-func UpdateRefreshTokenUsedAt(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error {
+func (r *PGRepository) UpdateRefreshTokenUsedAt(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error {
 	query := `UPDATE refresh_tokens
 	          SET used_at = $1
 	          WHERE id = $2`

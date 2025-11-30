@@ -8,7 +8,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
-	"github.com/yorukot/knocker/repository"
 	"go.uber.org/zap"
 )
 
@@ -98,16 +97,16 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 
 	// Begin the transaction
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction", err)
 	}
 
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
 	// Get the account and user by the provider and user ID for checking if the user is already linked/registered
-	account, user, err := repository.GetAccountWithUserByProviderUserID(c.Request().Context(), tx, provider, userInfo.Subject)
+	account, user, err := h.Repo.GetAccountWithUserByProviderUserID(c.Request().Context(), tx, provider, userInfo.Subject)
 	if err != nil {
 		zap.L().Error("Failed to get account", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get account")
@@ -126,7 +125,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		accountID = newAccount.ID
 
 		// Create the account
-		if err = repository.CreateAccount(c.Request().Context(), tx, newAccount); err != nil {
+		if err = h.Repo.CreateAccount(c.Request().Context(), tx, newAccount); err != nil {
 			zap.L().Error("Failed to create account", zap.Error(err))
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create account")
 		}
@@ -144,7 +143,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		}
 
 		// Create the user and account
-		if err = repository.CreateUserAndAccount(c.Request().Context(), tx, newUser, newAccount); err != nil {
+		if err = h.Repo.CreateUserAndAccount(c.Request().Context(), tx, newUser, newAccount); err != nil {
 			zap.L().Error("Failed to create user", zap.Error(err))
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create user and account")
 		}
@@ -173,7 +172,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 
 	// Create the oauth token
-	err = repository.CreateOAuthToken(c.Request().Context(), tx, models.OAuthToken{
+	err = h.Repo.CreateOAuthToken(c.Request().Context(), tx, models.OAuthToken{
 		AccountID:    accountID,
 		AccessToken:  token.AccessToken,
 		RefreshToken: &token.RefreshToken,
@@ -189,7 +188,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 
 	// Generate the refresh token
-	refreshToken, err := generateTokenAndSaveRefreshToken(c, tx, userID)
+	refreshToken, err := generateTokenAndSaveRefreshToken(c, h.Repo, tx, userID)
 	if err != nil {
 		zap.L().Error("Failed to create refresh token", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create refresh token")
@@ -202,7 +201,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 
 	// Commit the transaction
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		zap.L().Error("Failed to commit transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}

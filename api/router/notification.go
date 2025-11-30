@@ -1,16 +1,16 @@
 package router
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/api/handler/notification"
 	"github.com/yorukot/knocker/api/middleware"
+	"github.com/yorukot/knocker/repository"
 )
 
 // Auth router going to route register signin etc
-func NotificationRouter(api *echo.Group, db *pgxpool.Pool) {
+func NotificationRouter(api *echo.Group, repo repository.Repository) {
 	notificationHandler := &notification.NotificationHandler{
-		DB: db,
+		Repo: repo,
 	}
 	r := api.Group("/teams/:teamID/notifications", middleware.AuthRequiredMiddleware)
 

@@ -9,7 +9,7 @@ import (
 )
 
 // CreateMonitor inserts a monitor record.
-func CreateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) error {
+func (r *PGRepository) CreateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) error {
 	query := `
 		INSERT INTO monitors (id, team_id, name, type, interval, config, last_checked, next_check, notification, updated_at, creted_at, "group")
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -33,7 +33,7 @@ func CreateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) error
 }
 
 // ListMonitorsByTeamID returns monitors belonging to a team.
-func ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Monitor, error) {
+func (r *PGRepository) ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Monitor, error) {
 	query := `
 		SELECT id, team_id, name, type, interval, config, last_checked, next_check, notification, updated_at, creted_at, "group"
 		FROM monitors
@@ -50,7 +50,7 @@ func ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]model
 }
 
 // GetMonitorByID fetches a monitor ensuring it belongs to the provided team.
-func GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*models.Monitor, error) {
+func (r *PGRepository) GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*models.Monitor, error) {
 	query := `
 		SELECT id, team_id, name, type, interval, config, last_checked, next_check, notification, updated_at, creted_at, "group"
 		FROM monitors
@@ -82,7 +82,7 @@ func GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*m
 }
 
 // UpdateMonitor updates a monitor and returns the persisted record.
-func UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) (*models.Monitor, error) {
+func (r *PGRepository) UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) (*models.Monitor, error) {
 	query := `
 		UPDATE monitors
 		SET name = $1, type = $2, interval = $3, config = $4, last_checked = $5, next_check = $6, notification = $7, updated_at = $8, "group" = $9
@@ -127,7 +127,7 @@ func UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) (*mod
 }
 
 // DeleteMonitor removes a monitor belonging to a team.
-func DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) error {
+func (r *PGRepository) DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) error {
 	result, err := tx.Exec(ctx, `DELETE FROM monitors WHERE id = $1 AND team_id = $2`, monitorID, teamID)
 	if err != nil {
 		return err

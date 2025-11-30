@@ -10,7 +10,7 @@ import (
 )
 
 // ListTeamsByUserID returns all teams the user is a member of.
-func ListTeamsByUserID(ctx context.Context, tx pgx.Tx, userID int64) ([]models.TeamWithRole, error) {
+func (r *PGRepository) ListTeamsByUserID(ctx context.Context, tx pgx.Tx, userID int64) ([]models.TeamWithRole, error) {
 	query := `
 		SELECT t.id, t.name, t.updated_at, t.created_at, tm.role
 		FROM teams t
@@ -28,7 +28,7 @@ func ListTeamsByUserID(ctx context.Context, tx pgx.Tx, userID int64) ([]models.T
 }
 
 // GetTeamForUser returns the team if the user is a member of it.
-func GetTeamForUser(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*models.TeamWithRole, error) {
+func (r *PGRepository) GetTeamForUser(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*models.TeamWithRole, error) {
 	query := `
 		SELECT t.id, t.name, t.updated_at, t.created_at, tm.role
 		FROM teams t
@@ -55,7 +55,7 @@ func GetTeamForUser(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*mode
 }
 
 // GetTeamMemberByUserID returns the membership record for the user within the specified team.
-func GetTeamMemberByUserID(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*models.TeamMember, error) {
+func (r *PGRepository) GetTeamMemberByUserID(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*models.TeamMember, error) {
 	query := `
 		SELECT id, team_id, user_id, role, updated_at, created_at
 		FROM team_members
@@ -82,7 +82,7 @@ func GetTeamMemberByUserID(ctx context.Context, tx pgx.Tx, teamID, userID int64)
 }
 
 // CreateTeam inserts a new team record.
-func CreateTeam(ctx context.Context, tx pgx.Tx, team models.Team) error {
+func (r *PGRepository) CreateTeam(ctx context.Context, tx pgx.Tx, team models.Team) error {
 	query := `
 		INSERT INTO teams (id, name, updated_at, created_at)
 		VALUES ($1, $2, $3, $4)
@@ -93,7 +93,7 @@ func CreateTeam(ctx context.Context, tx pgx.Tx, team models.Team) error {
 }
 
 // CreateTeamMember inserts a new team membership record.
-func CreateTeamMember(ctx context.Context, tx pgx.Tx, member models.TeamMember) error {
+func (r *PGRepository) CreateTeamMember(ctx context.Context, tx pgx.Tx, member models.TeamMember) error {
 	query := `
 		INSERT INTO team_members (id, team_id, user_id, role, updated_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -104,7 +104,7 @@ func CreateTeamMember(ctx context.Context, tx pgx.Tx, member models.TeamMember) 
 }
 
 // UpdateTeamName updates a team's name.
-func UpdateTeamName(ctx context.Context, tx pgx.Tx, teamID int64, name string, updatedAt time.Time) (*models.Team, error) {
+func (r *PGRepository) UpdateTeamName(ctx context.Context, tx pgx.Tx, teamID int64, name string, updatedAt time.Time) (*models.Team, error) {
 	query := `
 		UPDATE teams
 		SET name = $1, updated_at = $2
@@ -129,7 +129,7 @@ func UpdateTeamName(ctx context.Context, tx pgx.Tx, teamID int64, name string, u
 }
 
 // DeleteTeam removes a team and its direct membership/invite records.
-func DeleteTeam(ctx context.Context, tx pgx.Tx, teamID int64) error {
+func (r *PGRepository) DeleteTeam(ctx context.Context, tx pgx.Tx, teamID int64) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM team_invites WHERE team_id = $1`, teamID); err != nil {
 		return err
 	}

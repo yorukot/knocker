@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
-	"github.com/yorukot/knocker/repository"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
@@ -76,14 +75,14 @@ func (h *NotificationHandler) UpdateNotification(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
-	member, err := repository.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
+	member, err := h.Repo.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
 	if err != nil {
 		zap.L().Error("Failed to get team membership", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get team membership")
@@ -97,7 +96,7 @@ func (h *NotificationHandler) UpdateNotification(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "You do not have permission to update this notification")
 	}
 
-	existing, err := repository.GetNotificationByID(c.Request().Context(), tx, teamID, notificationID)
+	existing, err := h.Repo.GetNotificationByID(c.Request().Context(), tx, teamID, notificationID)
 	if err != nil {
 		zap.L().Error("Failed to get notification", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get notification")
@@ -121,7 +120,7 @@ func (h *NotificationHandler) UpdateNotification(c echo.Context) error {
 
 	existing.UpdatedAt = time.Now()
 
-	notification, err := repository.UpdateNotification(c.Request().Context(), tx, *existing)
+	notification, err := h.Repo.UpdateNotification(c.Request().Context(), tx, *existing)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, "Notification not found")
@@ -135,7 +134,7 @@ func (h *NotificationHandler) UpdateNotification(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Notification not found")
 	}
 
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 

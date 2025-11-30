@@ -9,7 +9,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
-	"github.com/yorukot/knocker/repository"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/id"
 	"github.com/yorukot/knocker/utils/response"
@@ -25,7 +24,7 @@ type createMonitorRequest struct {
 	GroupID         *int64             `json:"group,omitempty"`
 }
 
-// CreateMonitor godocit 
+// CreateMonitor godocit
 // @Summary Create a monitor
 // @Description Creates a monitor for the given team (owner/admin only)
 // @Tags monitors
@@ -73,14 +72,14 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
-	member, err := repository.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
+	member, err := h.Repo.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
 	if err != nil {
 		zap.L().Error("Failed to get team membership", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get team membership")
@@ -116,12 +115,12 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 		GroupID:         req.GroupID,
 	}
 
-	if err := repository.CreateMonitor(c.Request().Context(), tx, monitor); err != nil {
+	if err := h.Repo.CreateMonitor(c.Request().Context(), tx, monitor); err != nil {
 		zap.L().Error("Failed to create monitor", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create monitor")
 	}
 
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 

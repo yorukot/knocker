@@ -11,6 +11,7 @@ import (
 	"github.com/yorukot/knocker/api/middleware"
 	"github.com/yorukot/knocker/api/router"
 	swaggerDocs "github.com/yorukot/knocker/docs"
+	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/config"
 	"go.uber.org/zap"
 )
@@ -27,13 +28,14 @@ func Run(db *pgxpool.Pool) {
 	env := config.Env()
 
 	// Setup routes
-	routes(e, db)
+	repo := repository.New(db)
+	routes(e, repo)
 	e.Logger.Infof("Starting server on port %s in %s mode", env.AppPort, env.AppEnv)
 	e.Logger.Fatal(e.Start(":" + env.AppPort))
 }
 
 // routes sets up the API routes
-func routes(e *echo.Echo, db *pgxpool.Pool) {
+func routes(e *echo.Echo, repo repository.Repository) {
 	// Development-only routes
 	if config.Env().AppEnv == config.AppEnvDev {
 		// Swagger documentation route
@@ -44,10 +46,10 @@ func routes(e *echo.Echo, db *pgxpool.Pool) {
 
 	// User routes
 	api := e.Group("/api")
-	router.AuthRouter(api, db)
-	router.TeamRouter(api, db)
-	router.NotificationRouter(api, db)
-	router.MonitorRouter(api, db)
+	router.AuthRouter(api, repo)
+	router.TeamRouter(api, repo)
+	router.NotificationRouter(api, repo)
+	router.MonitorRouter(api, repo)
 }
 
 func scalarDocsHandler() echo.HandlerFunc {

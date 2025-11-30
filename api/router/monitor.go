@@ -1,16 +1,16 @@
 package router
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/api/handler/monitor"
 	"github.com/yorukot/knocker/api/middleware"
+	"github.com/yorukot/knocker/repository"
 )
 
 // MonitorRouter handles monitor-related routes
-func MonitorRouter(api *echo.Group, db *pgxpool.Pool) {
+func MonitorRouter(api *echo.Group, repo repository.Repository) {
 	monitorHandler := &monitor.MonitorHandler{
-		DB: db,
+		Repo: repo,
 	}
 
 	r := api.Group("/teams/:teamID/monitors", middleware.AuthRequiredMiddleware)

@@ -8,7 +8,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
-	"github.com/yorukot/knocker/repository"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/id"
 	"github.com/yorukot/knocker/utils/response"
@@ -51,12 +50,12 @@ func (h *TeamHandler) CreateTeam(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
 	now := time.Now()
 
@@ -88,17 +87,17 @@ func (h *TeamHandler) CreateTeam(c echo.Context) error {
 		CreatedAt: now,
 	}
 
-	if err := repository.CreateTeam(c.Request().Context(), tx, team); err != nil {
+	if err := h.Repo.CreateTeam(c.Request().Context(), tx, team); err != nil {
 		zap.L().Error("Failed to create team", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create team")
 	}
 
-	if err := repository.CreateTeamMember(c.Request().Context(), tx, member); err != nil {
+	if err := h.Repo.CreateTeamMember(c.Request().Context(), tx, member); err != nil {
 		zap.L().Error("Failed to create team member", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create team member")
 	}
 
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
