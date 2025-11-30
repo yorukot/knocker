@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/yorukot/knocker/models"
 	"github.com/yorukot/knocker/utils/config"
 	"github.com/yorukot/knocker/utils/encrypt"
 	"go.uber.org/zap"
@@ -12,8 +12,6 @@ import (
 
 // authMiddlewareLogic is the logic for the auth middleware
 func authMiddlewareLogic(token string) (*encrypt.AccessTokenClaims, error) {
-	token = strings.TrimPrefix(token, "Bearer ")
-
 	JWTSecret := encrypt.JWTSecret{
 		Secret: config.Env().JWTSecretKey,
 	}
@@ -34,12 +32,12 @@ func authMiddlewareLogic(token string) (*encrypt.AccessTokenClaims, error) {
 // AuthRequiredMiddleware is the middleware for the auth required
 func AuthRequiredMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		token := c.Request().Header.Get("Authorization")
-		if token == "" {
+		accessCookie, err := c.Cookie(models.CookieNameAccessToken)
+		if err != nil || accessCookie.Value == "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 		}
 
-		claims, err := authMiddlewareLogic(token)
+		claims, err := authMiddlewareLogic(accessCookie.Value)
 		if err != nil {
 			return err
 		}
@@ -52,12 +50,12 @@ func AuthRequiredMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // AuthOptionalMiddleware is the middleware for the auth optional
 func AuthOptionalMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		token := c.Request().Header.Get("Authorization")
-		if token == "" {
+		accessCookie, err := c.Cookie(models.CookieNameAccessToken)
+		if err != nil || accessCookie.Value == "" {
 			return next(c)
 		}
 
-		claims, err := authMiddlewareLogic(token)
+		claims, err := authMiddlewareLogic(accessCookie.Value)
 		if err != nil {
 			// For optional auth, continue even if token is invalid
 			return next(c)

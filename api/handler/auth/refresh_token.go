@@ -19,7 +19,7 @@ import (
 
 // RefreshToken godoc
 // @Summary Refresh token
-// @Description Refreshes the access token using the refresh token cookie, returns a new access token and refresh token cookie
+// @Description Refreshes the access token using the refresh token cookie and issues new access/refresh token cookies
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -97,7 +97,8 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate access token")
 	}
 
-	return c.JSON(http.StatusCreated, response.Success("Access token refreshed successfully", map[string]string{
-		"access_token": accessToken,
-	}))
+	accessTokenCookie := generateAccessTokenCookie(accessToken)
+	c.SetCookie(&accessTokenCookie)
+
+	return c.JSON(http.StatusCreated, response.SuccessMessage("Access token refreshed successfully"))
 }

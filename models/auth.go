@@ -9,6 +9,7 @@ import (
 const (
 	CookieNameOAuthSession = "oauth_session"
 	CookieNameRefreshToken = "refresh_token"
+	CookieNameAccessToken  = "access_token"
 )
 
 type RefreshToken struct {

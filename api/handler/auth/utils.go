@@ -109,6 +109,41 @@ func generateRefreshTokenCookie(refreshToken models.RefreshToken) http.Cookie {
 	}
 }
 
+func generateAccessToken(userID int64) (string, error) {
+	accessTokenClaims := encrypt.JWTSecret{
+		Secret: config.Env().JWTSecretKey,
+	}
+
+	return accessTokenClaims.GenerateAccessToken(
+		config.Env().AppName,
+		strconv.FormatInt(userID, 10),
+		time.Now().Add(time.Duration(config.Env().AccessTokenExpiresAt)*time.Second),
+	)
+}
+
+func generateAccessTokenCookieForUser(userID int64) (http.Cookie, error) {
+	accessToken, err := generateAccessToken(userID)
+	if err != nil {
+		return http.Cookie{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	return generateAccessTokenCookie(accessToken), nil
+}
+
+// generateAccessTokenCookie generates an access token cookie
+func generateAccessTokenCookie(accessToken string) http.Cookie {
+	return http.Cookie{
+		Name:     models.CookieNameAccessToken,
+		Path:     "/api",
+		Domain:   config.Env().FrontendDomain,
+		Value:    accessToken,
+		HttpOnly: true,
+		Secure:   config.Env().AppEnv == config.AppEnvProd,
+		Expires:  time.Now().Add(time.Duration(config.Env().AccessTokenExpiresAt) * time.Second),
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
 // generateTokenAndSaveRefreshToken generates a refresh token and saves it to the database
 func generateTokenAndSaveRefreshToken(e echo.Context, tx pgx.Tx, userID int64) (models.RefreshToken, error) {
 	userAgent := e.Request().UserAgent()
