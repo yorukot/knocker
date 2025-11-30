@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yorukot/knocker/repository"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
@@ -39,14 +38,14 @@ func (h *TeamHandler) GetTeam(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
-	team, err := repository.GetTeamForUser(c.Request().Context(), tx, teamID, *userID)
+	team, err := h.Repo.GetTeamForUser(c.Request().Context(), tx, teamID, *userID)
 	if err != nil {
 		zap.L().Error("Failed to get team", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get team")
@@ -56,7 +55,7 @@ func (h *TeamHandler) GetTeam(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Team not found")
 	}
 
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 

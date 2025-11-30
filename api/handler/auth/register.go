@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
 )
@@ -45,16 +44,16 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Begin the transaction
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
 
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
 	// Get the account by email
-	checkedAccount, err := repository.GetAccountByEmail(c.Request().Context(), tx, registerRequest.Email)
+	checkedAccount, err := h.Repo.GetAccountByEmail(c.Request().Context(), tx, registerRequest.Email)
 	if err != nil {
 		zap.L().Error("Failed to check if user already exists", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to check if user already exists")
@@ -73,13 +72,13 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Create the user and account in the database
-	if err = repository.CreateUserAndAccount(c.Request().Context(), tx, user, account); err != nil {
+	if err = h.Repo.CreateUserAndAccount(c.Request().Context(), tx, user, account); err != nil {
 		zap.L().Error("Failed to create user", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create user")
 	}
 
 	// Generate the refresh token
-	refreshToken, err := generateTokenAndSaveRefreshToken(c, tx, user.ID)
+	refreshToken, err := generateTokenAndSaveRefreshToken(c, h.Repo, tx, user.ID)
 	if err != nil {
 		zap.L().Error("Failed to generate refresh token", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate refresh token")
@@ -92,7 +91,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Commit the transaction
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		zap.L().Error("Failed to commit transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}

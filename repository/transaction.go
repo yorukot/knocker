@@ -4,13 +4,12 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 // StartTransaction return a tx
-func StartTransaction(db *pgxpool.Pool, ctx context.Context) (pgx.Tx, error) {
-	tx, err := db.Begin(ctx)
+func (r *PGRepository) StartTransaction(ctx context.Context) (pgx.Tx, error) {
+	tx, err := r.DB.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -19,14 +18,14 @@ func StartTransaction(db *pgxpool.Pool, ctx context.Context) (pgx.Tx, error) {
 }
 
 // DeferRollback rollback the transaction if it's not already closed
-func DeferRollback(tx pgx.Tx, ctx context.Context) {
+func (r *PGRepository) DeferRollback(tx pgx.Tx, ctx context.Context) {
 	if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
 		zap.L().Error("Failed to rollback transaction", zap.Error(err))
 	}
 }
 
 // CommitTransaction commit the transaction
-func CommitTransaction(tx pgx.Tx, ctx context.Context) error {
+func (r *PGRepository) CommitTransaction(tx pgx.Tx, ctx context.Context) error {
 	if err := tx.Commit(ctx); err != nil {
 		zap.L().Error("Failed to commit transaction", zap.Error(err))
 		return err

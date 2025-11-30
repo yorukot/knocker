@@ -9,7 +9,7 @@ import (
 )
 
 // CreateNotification inserts a notification record.
-func CreateNotification(ctx context.Context, tx pgx.Tx, notification models.Notification) error {
+func (r *PGRepository) CreateNotification(ctx context.Context, tx pgx.Tx, notification models.Notification) error {
 	query := `
 		INSERT INTO notifications (id, team_id, type, name, config, updated_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -28,7 +28,7 @@ func CreateNotification(ctx context.Context, tx pgx.Tx, notification models.Noti
 }
 
 // ListNotificationsByTeamID returns notifications belonging to a team.
-func ListNotificationsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Notification, error) {
+func (r *PGRepository) ListNotificationsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Notification, error) {
 	query := `
 		SELECT id, team_id, type, name, config, updated_at, created_at
 		FROM notifications
@@ -45,7 +45,7 @@ func ListNotificationsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]
 }
 
 // GetNotificationByID fetches a notification ensuring it belongs to the provided team.
-func GetNotificationByID(ctx context.Context, tx pgx.Tx, teamID, notificationID int64) (*models.Notification, error) {
+func (r *PGRepository) GetNotificationByID(ctx context.Context, tx pgx.Tx, teamID, notificationID int64) (*models.Notification, error) {
 	query := `
 		SELECT id, team_id, type, name, config, updated_at, created_at
 		FROM notifications
@@ -72,7 +72,7 @@ func GetNotificationByID(ctx context.Context, tx pgx.Tx, teamID, notificationID 
 }
 
 // UpdateNotification updates a notification and returns the persisted record.
-func UpdateNotification(ctx context.Context, tx pgx.Tx, notification models.Notification) (*models.Notification, error) {
+func (r *PGRepository) UpdateNotification(ctx context.Context, tx pgx.Tx, notification models.Notification) (*models.Notification, error) {
 	query := `
 		UPDATE notifications
 		SET type = $1, name = $2, config = $3, updated_at = $4
@@ -107,7 +107,7 @@ func UpdateNotification(ctx context.Context, tx pgx.Tx, notification models.Noti
 }
 
 // DeleteNotification removes a notification belonging to a team.
-func DeleteNotification(ctx context.Context, tx pgx.Tx, teamID, notificationID int64) error {
+func (r *PGRepository) DeleteNotification(ctx context.Context, tx pgx.Tx, teamID, notificationID int64) error {
 	result, err := tx.Exec(ctx, `DELETE FROM notifications WHERE id = $1 AND team_id = $2`, notificationID, teamID)
 	if err != nil {
 		return err

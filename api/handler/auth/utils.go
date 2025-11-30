@@ -145,7 +145,7 @@ func generateAccessTokenCookie(accessToken string) http.Cookie {
 }
 
 // generateTokenAndSaveRefreshToken generates a refresh token and saves it to the database
-func generateTokenAndSaveRefreshToken(e echo.Context, tx pgx.Tx, userID int64) (models.RefreshToken, error) {
+func generateTokenAndSaveRefreshToken(e echo.Context, repo repository.Repository, tx pgx.Tx, userID int64) (models.RefreshToken, error) {
 	userAgent := e.Request().UserAgent()
 	ip := e.RealIP()
 
@@ -154,7 +154,7 @@ func generateTokenAndSaveRefreshToken(e echo.Context, tx pgx.Tx, userID int64) (
 		return models.RefreshToken{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	if err := repository.CreateRefreshToken(e.Request().Context(), tx, refreshToken); err != nil {
+	if err := repo.CreateRefreshToken(e.Request().Context(), tx, refreshToken); err != nil {
 		return models.RefreshToken{}, fmt.Errorf("failed to save refresh token: %w", err)
 	}
 

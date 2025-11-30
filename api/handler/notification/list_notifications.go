@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yorukot/knocker/repository"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
@@ -39,14 +38,14 @@ func (h *NotificationHandler) ListNotifications(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction")
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
-	member, err := repository.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
+	member, err := h.Repo.GetTeamMemberByUserID(c.Request().Context(), tx, teamID, *userID)
 	if err != nil {
 		zap.L().Error("Failed to get team membership", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get team membership")
@@ -56,13 +55,13 @@ func (h *NotificationHandler) ListNotifications(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Team not found")
 	}
 
-	notifications, err := repository.ListNotificationsByTeamID(c.Request().Context(), tx, teamID)
+	notifications, err := h.Repo.ListNotificationsByTeamID(c.Request().Context(), tx, teamID)
 	if err != nil {
 		zap.L().Error("Failed to list notifications", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list notifications")
 	}
 
-	if err := repository.CommitTransaction(tx, c.Request().Context()); err != nil {
+	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 

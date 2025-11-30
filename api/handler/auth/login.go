@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
-	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/encrypt"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
@@ -47,15 +46,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	// Begin the transaction
-	tx, err := repository.StartTransaction(h.DB, c.Request().Context())
+	tx, err := h.Repo.StartTransaction(c.Request().Context())
 	if err != nil {
 		zap.L().Error("Failed to begin transaction", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to begin transaction", err)
 	}
-	defer repository.DeferRollback(tx, c.Request().Context())
+	defer h.Repo.DeferRollback(tx, c.Request().Context())
 
 	// Get the user by email
-	user, err := repository.GetUserByEmail(c.Request().Context(), tx, loginRequest.Email)
+	user, err := h.Repo.GetUserByEmail(c.Request().Context(), tx, loginRequest.Email)
 	if err != nil {
 		zap.L().Error("Failed to get user by email", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get user by email", err)
@@ -80,7 +79,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	// Generate the refresh token
-	refreshToken, err := generateTokenAndSaveRefreshToken(c, tx, user.ID)
+	refreshToken, err := generateTokenAndSaveRefreshToken(c, h.Repo, tx, user.ID)
 	if err != nil {
 		zap.L().Error("Failed to generate refresh token", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate refresh token")
@@ -93,7 +92,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	// Commit the transaction
-	repository.CommitTransaction(tx, c.Request().Context())
+	h.Repo.CommitTransaction(tx, c.Request().Context())
 
 	// Generate the refresh token cookie
 	refreshTokenCookie := generateRefreshTokenCookie(refreshToken)

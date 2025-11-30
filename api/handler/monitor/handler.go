@@ -1,7 +1,7 @@
 package monitor
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import "github.com/yorukot/knocker/repository"
 
 type MonitorHandler struct {
-	DB *pgxpool.Pool
+	Repo repository.Repository
 }
