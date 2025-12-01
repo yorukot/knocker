@@ -42,7 +42,6 @@ type Monitor struct {
 
 	// Notifications
 	NotificationIDs []int64 `json:"notification" db:"notification"`
-	ResendThreshold int `json:"resend_threshold" validate:"gte=0,lte=100"`
 
 	// Metadata
 	GroupID   *int64    `json:"group,omitempty" db:"group"`

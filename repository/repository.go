@@ -49,6 +49,8 @@ type Repository interface {
 	GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*models.Monitor, error)
 	UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) (*models.Monitor, error)
 	DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) error
+	ListMonitorsDueForCheck(ctx context.Context, tx pgx.Tx) ([]models.Monitor, error)
+	BatchUpdateMonitorsLastChecked(ctx context.Context, tx pgx.Tx, monitorIDs []int64, nextChecks []time.Time, lastChecked time.Time) error
 }
 
 // PGRepository is the production repository backed by pgx.

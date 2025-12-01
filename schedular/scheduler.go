@@ -1,12 +1,14 @@
 package schedular
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/config"
 	"github.com/yorukot/knocker/worker/tasks"
 	"go.uber.org/zap"
@@ -19,6 +21,8 @@ func Run(pgsql *pgxpool.Pool) {
 		Password: config.Env().RedisPassword,
 	})
 	defer asynqClient.Close()
+
+	repo := repository.New(pgsql)
 	zap.L().Info("Starting scheduler")
 
 	// TODO: Implementing graceful shutdown
@@ -27,25 +31,45 @@ func Run(pgsql *pgxpool.Pool) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		loop(pgsql, asynqClient)
+		loop(repo, asynqClient)
 	}
 }
 
 // loop handles a single iteration of fetching and scheduling monitors
-func loop(pgsql *pgxpool.Pool, asynqClient *asynq.Client) {
-	// ctx := context.Background()
-	// first we need to fetch all monitors that need to be pinged
-	monitors := []models.Monitor{}
-	// monitors, err := repository.FetchMonitor(ctx, pgsql)
-	// if err != nil {
-	// zap.L().Error("Failed to fetch monitors", zap.Error(err))
-	// return
-	// }
+func loop(repo repository.Repository, asynqClient *asynq.Client) {
+	ctx := context.Background()
+
+	// Start a transaction to fetch monitors
+	tx, err := repo.StartTransaction(ctx)
+	if err != nil {
+		zap.L().Error("Failed to start transaction for fetching monitors", zap.Error(err))
+		return
+	}
+	defer repo.DeferRollback(tx, ctx)
+
+	// Fetch all monitors that need to be pinged
+	monitors, err := repo.ListMonitorsDueForCheck(ctx, tx)
+	if err != nil {
+		zap.L().Error("Failed to fetch monitors due for check", zap.Error(err))
+		return
+	}
+
+	// Commit the read transaction
+	if err := repo.CommitTransaction(tx, ctx); err != nil {
+		zap.L().Error("Failed to commit transaction", zap.Error(err))
+		return
+	}
+
+	if len(monitors) == 0 {
+		zap.L().Debug("No monitors due for checking")
+		return
+	}
+
 	zap.L().Info("Fetched monitors", zap.Int("count", len(monitors)))
 
-	// In this we need to saparate the monitors to the different goroutines it should be 100-200 monitor per goroutine
+	// In this we need to separate the monitors to different goroutines (100-200 monitors per goroutine)
 	// then call the scheduleMonitors function to insert into asynq queue
-	batchSize := 150 // 100-200 monitors per goroutine
+	batchSize := 100 // 100-200 monitors per goroutine
 	for i := 0; i < len(monitors); i += batchSize {
 		end := i + batchSize
 		end = min(end, len(monitors))
@@ -53,43 +77,85 @@ func loop(pgsql *pgxpool.Pool, asynqClient *asynq.Client) {
 
 		// Launch goroutine for each batch
 		go scheduleMonitors(batch, asynqClient)
+
+		// Batch update last pinged time
+		go batchUpdateLastChecked(repo, batch)
 	}
+}
+
+// batchUpdateLastChecked updates the last_checked and next_check times for a batch of monitors
+func batchUpdateLastChecked(repo repository.Repository, monitors []models.Monitor) {
+	ctx := context.Background()
+
+	// Start a transaction for updating
+	tx, err := repo.StartTransaction(ctx)
+	if err != nil {
+		zap.L().Error("Failed to start transaction for updating monitors", zap.Error(err))
+		return
+	}
+	defer repo.DeferRollback(tx, ctx)
+
+	now := time.Now()
+
+	// Prepare monitor IDs and their respective next_check times
+	monitorIDs := make([]int64, len(monitors))
+	nextChecks := make([]time.Time, len(monitors))
+
+	for i, monitor := range monitors {
+		monitorIDs[i] = monitor.ID
+		// Calculate next check time based on this monitor's specific interval with jitter
+		nextChecks[i] = now.Add(time.Duration(monitor.Interval)*time.Second + calculateJitter(monitor.Interval))
+	}
+
+	if err := repo.BatchUpdateMonitorsLastChecked(ctx, tx, monitorIDs, nextChecks, now); err != nil {
+		zap.L().Error("Failed to batch update monitors last checked time",
+			zap.Int("count", len(monitorIDs)),
+			zap.Error(err))
+		return
+	}
+
+	if err := repo.CommitTransaction(tx, ctx); err != nil {
+		zap.L().Error("Failed to commit update transaction", zap.Error(err))
+		return
+	}
+
+	zap.L().Debug("Successfully updated last checked time for monitors",
+		zap.Int("count", len(monitors)))
 }
 
 // Insert into schedular logic here
 // Detail: This basically going insert the monitor task into asynq queue
+// Creates one task per monitor per region
 func scheduleMonitors(monitors []models.Monitor, asynqClient *asynq.Client) {
+	regions := config.Env().AppRegions
+
 	for _, monitor := range monitors {
-		cfg, err := monitor.HTTPConfig()
-		if err != nil {
-			zap.L().Error("Skipping monitor with invalid config",
-				zap.Int64("monitor_id", monitor.ID),
-				zap.Error(err))
-			continue
-		}
+		// Create a task for each region
+		for _, region := range regions {
+			// Create asynq task with region
+			task, err := tasks.NewMonitorPing(monitor, region)
+			if err != nil {
+				zap.L().Error("Failed to create monitor task payload",
+					zap.Int64("monitor_id", monitor.ID),
+					zap.String("region", region),
+					zap.Error(err))
+				continue
+			}
 
-		// Create asynq task
-		task, err := tasks.NewMonitorPing(monitor)
-		if err != nil {
-			zap.L().Error("Failed to create monitor task payload",
-				zap.Int64("monitor_id", monitor.ID),
-				zap.Error(err))
-			continue
-		}
+			// Enqueue the task
+			info, err := asynqClient.Enqueue(task)
+			if err != nil {
+				zap.L().Error("Failed to enqueue monitor task",
+					zap.Int64("monitor_id", monitor.ID),
+					zap.String("region", region),
+					zap.Error(err))
+				continue
+			}
 
-		// Enqueue the task
-		info, err := asynqClient.Enqueue(task)
-		if err != nil {
-			zap.L().Error("Failed to enqueue monitor task",
+			zap.L().Debug("Enqueued monitor task",
 				zap.Int64("monitor_id", monitor.ID),
-				zap.String("url", cfg.URL),
-				zap.Error(err))
-			continue
+				zap.String("region", region),
+				zap.String("task_id", info.ID))
 		}
-
-		zap.L().Debug("Enqueued monitor task",
-			zap.Int64("monitor_id", monitor.ID),
-			zap.String("url", cfg.URL),
-			zap.String("task_id", info.ID))
 	}
 }

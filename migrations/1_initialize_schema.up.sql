@@ -102,7 +102,7 @@ CREATE TABLE "public"."monitors" (
     "next_check" timestamp NOT NULL,
     "notification" bigint[] NOT NULL,
     "updated_at" timestamp NOT NULL,
-    "creted_at" timestamp NOT NULL,
+    "created_at" timestamp NOT NULL,
     "group" bigint,
     CONSTRAINT "pk_monitors_id" PRIMARY KEY ("id")
 );
