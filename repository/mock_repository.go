@@ -184,3 +184,8 @@ func (m *MockRepository) BatchUpdateMonitorsLastChecked(ctx context.Context, tx 
 	args := m.Called(ctx, tx, monitorIDs, nextChecks, lastChecked)
 	return args.Error(0)
 }
+
+func (m *MockRepository) BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []models.Ping) error {
+	args := m.Called(ctx, tx, pings)
+	return args.Error(0)
+}

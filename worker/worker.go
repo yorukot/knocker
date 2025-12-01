@@ -5,6 +5,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/yorukot/knocker/repository"
 	"github.com/yorukot/knocker/utils/config"
 	"github.com/yorukot/knocker/worker/handler"
 	"github.com/yorukot/knocker/worker/tasks"
@@ -16,12 +17,13 @@ func Run(db *pgxpool.Pool) {
 	cfg := config.Env()
 
 	redisAddr := fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort)
+	redisOpt := asynq.RedisClientOpt{
+		Addr:     redisAddr,
+		Password: cfg.RedisPassword,
+	}
 
 	srv := asynq.NewServer(
-		asynq.RedisClientOpt{
-			Addr:     redisAddr,
-			Password: cfg.RedisPassword,
-		},
+		redisOpt,
 		asynq.Config{
 			Concurrency: 10000,
 			Queues: map[string]int{
@@ -32,7 +34,11 @@ func Run(db *pgxpool.Pool) {
 		},
 	)
 
-	h := handler.NewHandler(db)
+	notifier := asynq.NewClient(redisOpt)
+	defer notifier.Close()
+
+	repo := repository.New(db)
+	h := handler.NewHandler(repo, notifier)
 
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.GetMonitorPingType(config.Env().AppRegion), h.HandleStartServiceTask)
