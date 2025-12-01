@@ -173,3 +173,14 @@ func (m *MockRepository) DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, m
 	args := m.Called(ctx, tx, teamID, monitorID)
 	return args.Error(0)
 }
+
+func (m *MockRepository) ListMonitorsDueForCheck(ctx context.Context, tx pgx.Tx) ([]models.Monitor, error) {
+	args := m.Called(ctx, tx)
+	monitors, _ := args.Get(0).([]models.Monitor)
+	return monitors, args.Error(1)
+}
+
+func (m *MockRepository) BatchUpdateMonitorsLastChecked(ctx context.Context, tx pgx.Tx, monitorIDs []int64, nextChecks []time.Time, lastChecked time.Time) error {
+	args := m.Called(ctx, tx, monitorIDs, nextChecks, lastChecked)
+	return args.Error(0)
+}

@@ -16,10 +16,12 @@ const (
 
 // EnvConfig holds all environment variables for the application
 type EnvConfig struct {
-	AppEnv       AppEnv `env:"APP_ENV" envDefault:"prod"`
-	AppName      string `env:"APP_NAME" envDefault:"knocker"`
-	AppMachineID int16  `env:"APP_MACHINE_ID" envDefault:"1"`
-	AppPort      string `env:"APP_PORT" envDefault:"8000"`
+	AppEnv       AppEnv   `env:"APP_ENV" envDefault:"prod"`
+	AppName      string   `env:"APP_NAME" envDefault:"knocker"`
+	AppMachineID int16    `env:"APP_MACHINE_ID" envDefault:"1"`
+	AppPort      string   `env:"APP_PORT" envDefault:"8000"`
+	AppRegion    string   `env:"APP_REGION" envDefault:"TW-Taipei"`
+	AppRegions   []string `env:"APP_REGIONS" envDefault:"TW-Taipei" envSeparator:","`
 
 	JWTSecretKey   string `env:"JWT_SECRET_KEY,required" envDefault:"change_me_to_a_secure_key"`
 	FrontendDomain string `env:"FRONTEND_DOMAIN" envDefault:"localhost"`

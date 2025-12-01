@@ -35,7 +35,7 @@ func Run(db *pgxpool.Pool) {
 	h := handler.NewHandler(db)
 
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeMonitorPing, h.HandleStartServiceTask)
+	mux.HandleFunc(tasks.GetMonitorPingType(config.Env().AppRegion), h.HandleStartServiceTask)
 
 	if err := srv.Run(mux); err != nil {
 		panic(err)
