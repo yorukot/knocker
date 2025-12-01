@@ -140,3 +140,4 @@ ALTER TABLE "public"."team_invites" ADD CONSTRAINT "fk_team_invites_Invited_to_u
 ALTER TABLE "public"."team_invites" ADD CONSTRAINT "fk_team_invites_team_id_teams_id" FOREIGN KEY("team_id") REFERENCES "public"."teams"("id");
 ALTER TABLE "public"."team_members" ADD CONSTRAINT "fk_team_members_team_id_teams_id" FOREIGN KEY("team_id") REFERENCES "public"."teams"("id");
 ALTER TABLE "public"."team_members" ADD CONSTRAINT "fk_team_members_user_id_users_id" FOREIGN KEY("user_id") REFERENCES "public"."users"("id");
+ALTER TABLE "public"."monitors" ADD CONSTRAINT "fk_monitors_team_id_teams_id" FOREIGN KEY("team_id") REFERENCES "public"."teams"("id");
