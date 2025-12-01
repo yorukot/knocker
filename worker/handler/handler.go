@@ -1,19 +1,20 @@
 package handler
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	"github.com/hibiken/asynq"
+	"github.com/yorukot/knocker/repository"
 )
 
-// Handler holds dependencies for task handlers.
 type Handler struct {
-	db    *pgxpool.Pool
-	redis *redis.Client
+	repo       repository.Repository
+	notifier   *asynq.Client
+	pingBuffer *PingRecorder
 }
 
-// NewHandler creates a new Handler with the given dependencies.
-func NewHandler(db *pgxpool.Pool) *Handler {
+func NewHandler(repo repository.Repository, notifier *asynq.Client) *Handler {
 	return &Handler{
-		db: db,
+		repo:       repo,
+		notifier:   notifier,
+		pingBuffer: NewPingRecorder(repo),
 	}
 }

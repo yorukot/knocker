@@ -51,6 +51,9 @@ type Repository interface {
 	DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) error
 	ListMonitorsDueForCheck(ctx context.Context, tx pgx.Tx) ([]models.Monitor, error)
 	BatchUpdateMonitorsLastChecked(ctx context.Context, tx pgx.Tx, monitorIDs []int64, nextChecks []time.Time, lastChecked time.Time) error
+
+	// Pings
+	BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []models.Ping) error
 }
 
 // PGRepository is the production repository backed by pgx.

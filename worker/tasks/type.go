@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	TypeMonitorPingPattern = "monitor:ping:{region}"
+	TypeMonitorPingPattern   = "monitor:ping:{region}"
+	TypeNotificationDispatch = "notification:dispatch"
 )
 
 // GetMonitorPingTypeForRegion returns the monitor ping task type for a specific region
