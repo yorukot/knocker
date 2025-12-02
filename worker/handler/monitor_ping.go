@@ -68,6 +68,7 @@ func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.P
 	for _, notificationID := range monitor.NotificationIDs {
 
 		payload := tasks.NotificationPayload{
+			TeamID:         monitor.TeamID,
 			MonitorID:      monitor.ID,
 			NotificationID: notificationID,
 			Region:         region,

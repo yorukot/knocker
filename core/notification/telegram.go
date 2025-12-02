@@ -14,7 +14,7 @@ import (
 // telegramAPIBase is overridable for testing.
 var telegramAPIBase = "https://api.telegram.org"
 
-func sendTelegram(ctx context.Context, client *http.Client, notification models.Notification, title, description string) error {
+func sendTelegram(ctx context.Context, client *http.Client, notification models.Notification, title, description string, _ models.PingStatus) error {
 	var cfg models.TelegramNotificationConfig
 	if err := json.Unmarshal(notification.Config, &cfg); err != nil {
 		return fmt.Errorf("decode telegram config: %w", err)

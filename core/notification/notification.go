@@ -14,21 +14,21 @@ import (
 
 // Send dispatches a notification using the provided notification model.
 // Title and description are sent to the configured channel depending on the notification type.
-func Send(ctx context.Context, notification models.Notification, title, description string) error {
-	return SendWithClient(ctx, http.DefaultClient, notification, title, description)
+func Send(ctx context.Context, notification models.Notification, title, description string, status models.PingStatus) error {
+	return SendWithClient(ctx, http.DefaultClient, notification, title, description, status)
 }
 
 // SendWithClient allows injecting a custom HTTP client (useful for tests) while sending the notification.
-func SendWithClient(ctx context.Context, client *http.Client, notification models.Notification, title, description string) error {
+func SendWithClient(ctx context.Context, client *http.Client, notification models.Notification, title, description string, status models.PingStatus) error {
 	if client == nil {
 		client = http.DefaultClient
 	}
 
 	switch notification.Type {
 	case models.NotificationTypeDiscord:
-		return sendDiscord(ctx, client, notification, title, description)
+		return sendDiscord(ctx, client, notification, title, description, status)
 	case models.NotificationTypeTelegram:
-		return sendTelegram(ctx, client, notification, title, description)
+		return sendTelegram(ctx, client, notification, title, description, status)
 	case models.NotificationTypeEmail:
 		return fmt.Errorf("email notification not implemented")
 	default:
