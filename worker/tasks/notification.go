@@ -9,10 +9,11 @@ import (
 
 // NotificationPayload represents a notification dispatch request.
 type NotificationPayload struct {
+	TeamID         int64       `json:"team_id,string"`
 	MonitorID      int64       `json:"monitor_id,string"`
 	NotificationID int64       `json:"notification_id,string"`
 	Region         string      `json:"region"`
-	Ping           models.Ping `json:"status"`
+	Ping           models.Ping `json:"ping"`
 }
 
 func NewNotificationDispatch(payload NotificationPayload) (*asynq.Task, error) {

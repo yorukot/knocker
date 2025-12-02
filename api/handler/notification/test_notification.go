@@ -86,7 +86,7 @@ func (h *NotificationHandler) TestNotification(c echo.Context) error {
 	title := "Knocker notification test"
 	description := fmt.Sprintf("Test notification for team %d and channel %q", teamID, notification.Name)
 
-	if err := notificationcore.Send(c.Request().Context(), *notification, title, description); err != nil {
+	if err := notificationcore.Send(c.Request().Context(), *notification, title, description, models.PingStatusSuccessful); err != nil {
 		zap.L().Error("Failed to send test notification", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to send test notification")
 	}
