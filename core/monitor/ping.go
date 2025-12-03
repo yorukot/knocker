@@ -57,21 +57,11 @@ func RunPing(ctx context.Context, monitor models.Monitor) (*Result, error) {
 	success := stats != nil && stats.PacketsRecv > 0
 	status, message := classifyPingOutcome(runErr, success)
 
-	data := map[string]any{
-		"packet_size": packetSize,
-	}
-	if ip := pinger.IPAddr(); ip != nil {
-		data["address"] = ip.String()
-	}
-	if !success {
-		data["error"] = message
-	}
-
 	return &Result{
 		Success:  success,
 		Duration: duration,
 		Status:   status,
-		Data:     data,
+		Message:  message,
 	}, runErr
 }
 

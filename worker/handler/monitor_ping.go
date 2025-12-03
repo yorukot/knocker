@@ -20,7 +20,7 @@ func (h *Handler) HandleStartServiceTask(ctx context.Context, t *asynq.Task) err
 		return err
 	}
 
-	ping, err := h.pingMonitor(ctx, payload.Monitor, payload.Region)
+	ping, detail, err := h.pingMonitor(ctx, payload.Monitor, payload.Region)
 	if err != nil {
 		zap.L().Warn("monitor ping encountered error",
 			zap.Int64("monitor_id", payload.Monitor.ID),
@@ -33,15 +33,22 @@ func (h *Handler) HandleStartServiceTask(ctx context.Context, t *asynq.Task) err
 	// Before enqueueing notifications, check if the ping was unsuccessful. and if this is the first time
 
 	if ping.Status != models.PingStatusSuccessful {
-		h.enqueueNotificationTasks(payload.Monitor, ping, payload.Region)
+		h.enqueueNotificationTasks(payload.Monitor, ping, payload.Region, detail)
 	}
 
 	// Errors are logged and captured in ping history; returning nil prevents repeated retries.
 	return nil
 }
 
-func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, region string) (models.Ping, error) {
+func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, region string) (models.Ping, string, error) {
 	result, err := monitorcore.Run(ctx, monitor)
+
+	message := ""
+	if result != nil {
+		message = result.Message
+	} else if err != nil {
+		message = err.Error()
+	}
 
 	ping := models.Ping{
 		Time:      time.Now().UTC(),
@@ -54,15 +61,12 @@ func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, regio
 	if result != nil {
 		ping.Status = result.Status
 		ping.Latency = int(clampLatencyMs(result.Duration))
-		ping.Data = marshalPingData(result.Data)
-	} else {
-		ping.Data = marshalPingData(map[string]any{"error": err.Error()})
 	}
 
-	return ping, err
+	return ping, message, err
 }
 
-func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.Ping, region string) {
+func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.Ping, region string, detail string) {
 	if h.notifier == nil {
 		return
 	}
@@ -105,6 +109,7 @@ func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.P
 			NotificationID: notificationID,
 			Region:         region,
 			Ping:           ping,
+			Detail:         detail,
 		}
 
 		task, err := tasks.NewNotificationDispatch(payload)
@@ -123,11 +128,6 @@ func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.P
 				zap.Error(err))
 		}
 	}
-}
-
-func marshalPingData(data any) json.RawMessage {
-	encoded, _ := json.Marshal(data)
-	return encoded
 }
 
 func clampLatencyMs(duration time.Duration) int64 {

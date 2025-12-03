@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/hibiken/asynq"
 	notificationcore "github.com/yorukot/knocker/core/notification"
@@ -42,7 +43,7 @@ func (h *Handler) HandleNotificationDispatch(ctx context.Context, t *asynq.Task)
 		return nil
 	}
 
-	detail := notificationcore.DetailFromRaw(payload.Ping.Data)
+	detail := strings.TrimSpace(payload.Detail)
 	title, description := notificationcore.FormatMessage(notificationcore.MessageInput{
 		MonitorName: monitor.Name,
 		Status:      payload.Ping.Status,

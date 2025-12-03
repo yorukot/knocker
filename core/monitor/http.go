@@ -54,9 +54,7 @@ func RunHTTP(ctx context.Context, baseClient *http.Client, monitor models.Monito
 			Success:  false,
 			Duration: duration,
 			Status:   status,
-			Data: map[string]any{
-				"error": message,
-			},
+			Message:  message,
 		}, fmt.Errorf("%s: %w", message, err)
 	}
 	defer resp.Body.Close()
@@ -72,18 +70,16 @@ func RunHTTP(ctx context.Context, baseClient *http.Client, monitor models.Monito
 		status = models.PingStatusSuccessful
 	}
 
-	data := map[string]any{
-		"http_status_code": resp.StatusCode,
-	}
+	message := ""
 	if !success {
-		data["error"] = statusErrorMessage(resp.StatusCode, cfg.UpSideDownMode)
+		message = statusErrorMessage(resp.StatusCode, cfg.UpSideDownMode)
 	}
 
 	return &Result{
 		Success:  success,
 		Duration: duration,
 		Status:   status,
-		Data:     data,
+		Message:  message,
 	}, nil
 }
 
