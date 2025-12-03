@@ -14,6 +14,7 @@ type NotificationPayload struct {
 	NotificationID int64       `json:"notification_id,string"`
 	Region         string      `json:"region"`
 	Ping           models.Ping `json:"ping"`
+	Detail         string      `json:"detail,omitempty"`
 }
 
 func NewNotificationDispatch(payload NotificationPayload) (*asynq.Task, error) {

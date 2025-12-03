@@ -14,7 +14,7 @@ type Result struct {
 	Success  bool
 	Duration time.Duration
 	Status   models.PingStatus
-	Data     any
+	Message  string
 }
 
 // Run executes a monitor using the default HTTP client.
