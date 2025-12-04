@@ -272,7 +272,7 @@ func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor
 	}
 
 	allSuccessful := true
-	for i := range(recoveryThreshold) {
+	for i := range recoveryThreshold {
 		if samples[i].Status != models.PingStatusSuccessful {
 			allSuccessful = false
 			break
@@ -312,7 +312,7 @@ func countFailures(pings []models.Ping, window int) int {
 	limit := min(len(pings), window)
 
 	failures := 0
-	for i := range(limit) {
+	for i := range limit {
 		if pings[i].Status != models.PingStatusSuccessful {
 			failures++
 		}

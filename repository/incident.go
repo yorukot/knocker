@@ -98,7 +98,7 @@ func (r *PGRepository) CreateIncidentEvent(ctx context.Context, tx pgx.Tx, event
 	_, err := tx.Exec(ctx, query,
 		event.ID,
 		event.IncidentID,
-		nil, // created_by is optional; set by API when available.
+		event.CreatedBy,
 		event.Message,
 		event.EventType,
 		event.Public,
@@ -111,7 +111,7 @@ func (r *PGRepository) CreateIncidentEvent(ctx context.Context, tx pgx.Tx, event
 // GetLastIncidentEvent returns the most recent event for an incident.
 func (r *PGRepository) GetLastIncidentEvent(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.IncidentEvent, error) {
 	const query = `
-		SELECT id, incident_id, message, event_type, public, created_at, updated_at
+		SELECT id, incident_id, created_by, message, event_type, public, created_at, updated_at
 		FROM incident_events
 		WHERE incident_id = $1
 		ORDER BY created_at DESC, id DESC
@@ -127,4 +127,79 @@ func (r *PGRepository) GetLastIncidentEvent(ctx context.Context, tx pgx.Tx, inci
 	}
 
 	return &event, nil
+}
+
+// ListIncidentsByMonitorID returns all incidents for a monitor.
+func (r *PGRepository) ListIncidentsByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) ([]models.Incident, error) {
+	const query = `
+		SELECT id, monitor_id, status, started_at, resloved_at, created_at, updated_at
+		FROM incidents
+		WHERE monitor_id = $1
+		ORDER BY started_at DESC, id DESC
+	`
+
+	var incidents []models.Incident
+	if err := pgxscan.Select(ctx, tx, &incidents, query, monitorID); err != nil {
+		return nil, err
+	}
+
+	return incidents, nil
+}
+
+// GetIncidentByID fetches an incident scoped to the given monitor.
+func (r *PGRepository) GetIncidentByID(ctx context.Context, tx pgx.Tx, monitorID, incidentID int64) (*models.Incident, error) {
+	const query = `
+		SELECT id, monitor_id, status, started_at, resloved_at, created_at, updated_at
+		FROM incidents
+		WHERE id = $1 AND monitor_id = $2
+	`
+
+	var incident models.Incident
+	if err := pgxscan.Get(ctx, tx, &incident, query, incidentID, monitorID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &incident, nil
+}
+
+// ListIncidentEventsByIncidentID fetches all events for an incident in chronological order.
+func (r *PGRepository) ListIncidentEventsByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.IncidentEvent, error) {
+	const query = `
+		SELECT id, incident_id, created_by, message, event_type, public, created_at, updated_at
+		FROM incident_events
+		WHERE incident_id = $1
+		ORDER BY created_at ASC, id ASC
+	`
+
+	var events []models.IncidentEvent
+	if err := pgxscan.Select(ctx, tx, &events, query, incidentID); err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+// UpdateIncidentStatus updates the status (and optional resolved time) for an incident and returns the updated row.
+func (r *PGRepository) UpdateIncidentStatus(ctx context.Context, tx pgx.Tx, incidentID int64, status models.IncidentStatus, resolvedAt *time.Time, updatedAt time.Time) (*models.Incident, error) {
+	const query = `
+		UPDATE incidents
+		SET status = $2,
+		    resloved_at = $3,
+		    updated_at = $4
+		WHERE id = $1
+		RETURNING id, monitor_id, status, started_at, resloved_at, created_at, updated_at
+	`
+
+	var incident models.Incident
+	if err := pgxscan.Get(ctx, tx, &incident, query, incidentID, status, resolvedAt, updatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &incident, nil
 }
