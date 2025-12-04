@@ -42,6 +42,7 @@ type Incident struct {
 type IncidentEvent struct {
 	ID         int64             `json:"id,string" db:"id"`
 	IncidentID int64             `json:"incident_id,string" db:"incident_id"`
+	CreatedBy  *int64            `json:"created_by,omitempty" db:"created_by"`
 	Message    string            `json:"message" db:"message"`
 	EventType  IncidentEventType `json:"event_type" db:"event_type"`
 	Public     bool              `json:"public" db:"public"`
