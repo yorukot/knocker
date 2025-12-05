@@ -1,37 +1,35 @@
 # Repository Guidelines
 
-Use this guide to work consistently in the Knocker Go codebase and ship changes safely.
+Use this guide to work consistently in the Knocker Go codebase and ship changes safely. Deep dives: `agents/overview.md` (runtime flow), `agents/monitoring.md` (pings/incidents), `agents/data.md` (schema/repository), `agents/api.md` (HTTP/auth), and `agents/notifications.md` (queues/dispatch).
 
 ## Project Structure & Module Organization
-- Entry point: `cmd/main.go` starts the API, worker, and schedular (or targeted via `api`/`worker`/`schedular` args).
-- HTTP layer: `api/` handlers, middleware, routing; generated Swagger lives in `api/docs/`.
-- Data layer: `db/` connections, `repository/` query helpers, `models/` domain structs, `migrations/` SQL.
-- Background work: `worker/` for jobs, `schedular/` for cron-like tasks.
-- Utilities: `utils/` for config, logging (zap), IDs, helpers. Artifacts land in `tmp/`. Local services defined in `compose.yaml`.
+- Entry point: `cmd/main.go` starts API, worker, and schedular (or targeted via `api`/`worker`/`schedular` args).
+- HTTP: handlers/middleware/routing in `api/`; Swagger in `api/docs/`.
+- Data: `db/` connections, `repository/` queries, `models/` structs, `migrations/` SQL (one active incident per monitor enforced in `migrations/2_*`). IDs come from `utils/id` (sonyflake).
+- Background: `worker/` (Asynq consumers, ping handling, notifications) and `schedular/` (queues monitor tasks, updates next_check).
+- Utilities: `utils/` for config (`utils/config`), logging (`utils/logger`), IDs, helpers. Artifacts in `tmp/`. Local services in `compose.yaml`.
 
-## Build, Test, and Development Commands
-- `docker compose up -d` — start TimescaleDB and Dragonfly locally.
-- `make build` — build `tmp/knocker` binary. `make run` runs API, worker, and schedular together.
-- Dev reload: `make dev` for all, or `make api` / `make worker` / `make schedular` for focused hot reload (air).
-- Tests: `make test` or `go test ./...`. Lint/format: `make lint` (runs `go fmt`, `go vet`, `golint`).
-- Docs: `make generate-docs` regenerates Swagger from `cmd/main.go`. Seed sample data: `make seed`. Clean artifacts: `make clean`.
+## How the system operates
+- Scheduler polls every 2s for monitors whose `next_check` has elapsed, enqueues `monitor:ping:{region}` tasks for each region (`APP_REGIONS`), and updates `last_checked`/`next_check` with jitter. Worker consumes only the current `APP_REGION` queue.
+- Worker executes monitors via `core/monitor.Run` (HTTP or ping), buffers ping results to `pings` through `PingRecorder`, then evaluates incidents (`worker/handler/monitor_ping.go`). Notifications dispatch asynchronously when incidents are created or resolved.
+- Refer to `agents/monitoring.md` before modifying ping execution, thresholds, incident logic, or notification triggers.
+
+## API Design Conventions
+- RESTful resources (e.g., `/users`, `/teams/{id}`) with Auth-required routes in `api/router/`.
+- Handlers live under `api/handler/<resource>/`, one handler per file (e.g., `list.go`, `create.go`); define routes per resource file in `api/router/` (e.g., `monitor.go`, `incident.go`).
+- Keep DTOs beside their handlers; generated docs live with the API (`make generate-docs`).
 
 ## Coding Style & Naming Conventions
-- Go defaults: tabs; always commit gofmt output.
-- Keep package-scoped names short and descriptive; place request/response DTOs near their handlers.
-- Prefix repository methods by resource (e.g., `UserCreate`, `TeamList`); add new env vars in `utils/config` with documented defaults.
+- Go defaults: tabs; always commit gofmt output. Follow the Uber Go style guide.
+- Keep package-scoped names short and descriptive; place request/response DTOs near handlers.
+- Prefix repository methods by resource (e.g., `UserCreate`, `TeamList`); add env vars in `utils/config` with documented defaults.
 - Use `utils/logger` for structured logs and pass contexts for request-scoped work.
 
 ## Testing Guidelines
-- Prefer table-driven tests alongside code in the same package; name `TestFunction_Scenario`.
+- Prefer table-driven tests in the same package; name `TestFunction_Scenario`.
 - Cover new public functions plus validation and data-access edges; prefer fakes over real services.
 - Run `go test ./...` before pushing; keep fixtures near the tested package.
 
-## Commit & Pull Request Guidelines
-- Follow Conventional Commits seen in `git log` (`feat: ...`, `fix: ...`, `chore: ...`).
-- PRs should state scope, rationale, impact, and linked issues; note config or migration changes and backward-compat expectations.
-- Include curl examples or screenshots for API-visible changes and list which tests you ran.
-
 ## Security & Configuration Tips
-- `.env` auto-loads; never commit secrets—use example placeholders. Set `JWT_SECRET_KEY`, OAuth, and DB/Redis values per `utils/config`.
+- `.env` auto-loads; never commit secrets - use example placeholders. Set `JWT_SECRET_KEY`, OAuth, and DB/Redis values per `utils/config`.
 - Avoid default passwords locally; when migrations change, document rollback behavior in the PR.
