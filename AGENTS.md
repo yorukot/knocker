@@ -1,6 +1,7 @@
 # Repository Guidelines
 
 Use this guide to work consistently in the Knocker Go codebase and ship changes safely. Deep dives: `agents/overview.md` (runtime flow), `agents/monitoring.md` (pings/incidents), `agents/data.md` (schema/repository), `agents/api.md` (HTTP/auth), and `agents/notifications.md` (queues/dispatch).
+- Do not look at or modify the `website/` folder at any time; stay focused on backend changes only.
 
 ## Project Structure & Module Organization
 - Entry point: `cmd/main.go` starts API, worker, and schedular (or targeted via `api`/`worker`/`schedular` args).
