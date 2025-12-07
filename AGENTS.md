@@ -1,7 +1,13 @@
 # Repository Guidelines
 
-Use this guide to work consistently in the Knocker Go codebase and ship changes safely. Deep dives: `agents/overview.md` (runtime flow), `agents/monitoring.md` (pings/incidents), `agents/data.md` (schema/repository), `agents/api.md` (HTTP/auth), and `agents/notifications.md` (queues/dispatch).
-- Do not look at or modify the `website/` folder at any time; stay focused on backend changes only.
+Use this guide to work consistently in the Knocker Go codebase and ship changes safely. Role-specific guides: `agents/backend/guide.md` for Go services and `agents/frontend/guide.md` for `website/` work. Backend deep dives: `agents/backend/overview.md` (runtime flow), `agents/backend/monitoring.md` (pings/incidents), `agents/backend/data.md` (schema/repository), `agents/backend/api.md` (HTTP/auth), and `agents/backend/notifications.md` (queues/dispatch). Agents run with the Context7 MCP server available—use it to pull fresh, official docs for libraries and cloud services before coding or reviewing.
+- Only read or modify the `website/` folder when the task explicitly requires a frontend change; otherwise leave it untouched to stay focused on backend work.
+
+## Mandatory Workflow Rules
+- Before taking any action, read the relevant guide: `agents/backend/*` for backend changes or `agents/frontend/*` for website work; do this step-by-step as you proceed.
+- For every step of work, consult the newest official docs via Context7 (or another available MCP server) to confirm current APIs/behaviors before implementing or reviewing.
+- If anything is unclear, pause and ask questions rather than assuming; keep asking until requirements are fully understood.
+- You may ask as many clarifying questions as needed at any point in the workflow.
 
 ## Project Structure & Module Organization
 - Entry point: `cmd/main.go` starts API, worker, and schedular (or targeted via `api`/`worker`/`schedular` args).
