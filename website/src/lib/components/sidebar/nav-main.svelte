@@ -17,7 +17,7 @@
 		{#each items as item (item.title)}
 			<a href={item.url}>
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton tooltipContent={item.title}>
+					<Sidebar.MenuButton tooltipContent={item.title} class="select-none">
 						{#if item.icon}
 							<Icon icon={item.icon} />
 						{/if}
