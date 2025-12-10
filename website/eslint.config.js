@@ -28,7 +28,7 @@ export default defineConfig(
 			"svelte/no-navigation-without-resolve": [
 				"error",
 				{
-					ignoreGoto: false,
+					ignoreGoto: true,
 					ignoreLinks: true,
 					ignorePushState: false,
 					ignoreReplaceState: false

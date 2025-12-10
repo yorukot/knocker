@@ -16,6 +16,7 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.39.1",
+		"@iconify/svelte": "^5.1.0",
 		"@internationalized/date": "^3.10.0",
 		"@lucide/svelte": "^0.544.0",
 		"@sveltejs/adapter-auto": "^7.0.0",
@@ -50,9 +51,12 @@
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.47.0",
 		"vaul-svelte": "1.0.0-next.7",
-		"vite": "^7.2.2"
+		"vite": "^7.2.2",
+		"zod": "^4.1.13"
 	},
 	"dependencies": {
+		"@iconify-json/lucide": "^1.2.79",
+		"@iconify-json/ri": "^1.2.6",
 		"mode-watcher": "^1.1.0"
 	}
 }

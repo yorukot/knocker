@@ -27,6 +27,9 @@ type Repository interface {
 	CreateRefreshToken(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error
 	UpdateRefreshTokenUsedAt(ctx context.Context, tx pgx.Tx, token models.RefreshToken) error
 
+	// Users
+	GetUserByID(ctx context.Context, tx pgx.Tx, userID int64) (*models.User, error)
+
 	// Teams
 	ListTeamsByUserID(ctx context.Context, tx pgx.Tx, userID int64) ([]models.TeamWithRole, error)
 	GetTeamForUser(ctx context.Context, tx pgx.Tx, teamID, userID int64) (*models.TeamWithRole, error)

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	let {
 		items
@@ -6,9 +7,7 @@
 		items: {
 			title: string;
 			url: string;
-			// this should be `Component` after @lucide/svelte updates types
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			icon?: any;
+			icon?: string;
 		}[];
 	} = $props();
 </script>
@@ -20,7 +19,7 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent={item.title}>
 						{#if item.icon}
-							<item.icon />
+							<Icon icon={item.icon} />
 						{/if}
 						<span>{item.title}</span>
 					</Sidebar.MenuButton>

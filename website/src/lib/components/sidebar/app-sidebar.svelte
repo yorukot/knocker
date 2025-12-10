@@ -1,13 +1,4 @@
 <script lang="ts" module>
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
-	import AudioWaveformIcon from '@lucide/svelte/icons/audio-waveform';
-	import BellIcon from '@lucide/svelte/icons/bell';
-	import CommandIcon from '@lucide/svelte/icons/command';
-	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
-	import Globe2Icon from '@lucide/svelte/icons/globe-2';
-	import MonitorIcon from '@lucide/svelte/icons/monitor';
-	import Settings2Icon from '@lucide/svelte/icons/settings-2';
-	import UsersIcon from '@lucide/svelte/icons/users';
 	// This is sample data.
 	const data = {
 		user: {
@@ -17,54 +8,57 @@
 		},
 		teams: [
 			{
-				name: 'Acme Inc',
-				logo: GalleryVerticalEndIcon,
-				plan: 'Enterprise'
-			},
-			{
-				name: 'Acme Corp.',
-				logo: AudioWaveformIcon,
-				plan: 'Startup'
-			},
-			{
-				name: 'Evil Corp.',
-				logo: CommandIcon,
-				plan: 'Free'
-			}
-		],
-		navMain: [
-			{
-				title: 'Monitors',
-				url: '/monitors',
-				icon: MonitorIcon
-			},
-			{
-				title: 'Incidents',
-				url: '/incidents',
-				icon: AlertTriangleIcon
-			},
-			{
-				title: 'Notifications',
-				url: '/notifications',
-				icon: BellIcon
-			},
-			{
-				title: 'Status pages',
-				url: '/status-pages',
-				icon: Globe2Icon
-			},
-			{
-				title: 'Teams',
-				url: '/teams',
-				icon: UsersIcon
-			},
-			{
-				title: 'Settings',
-				url: '/settings',
-				icon: Settings2Icon
-			}
-		]
-	};
+			  id: '123',
+			name: 'Acme Inc',
+			logo: 'lucide:layout-panel-left',
+			plan: 'Enterprise'
+		},
+		{
+			id: '456',
+			name: 'Acme Corp.',
+			logo: 'lucide:audio-waveform',
+			plan: 'Startup'
+		},
+		{
+      id: '789',
+			name: 'Evil Corp.',
+			logo: 'lucide:terminal',
+			plan: 'Free'
+		}
+	],
+	navMain: [
+		{
+			title: 'Monitors',
+			url: '/monitors',
+			icon: 'lucide:monitor'
+		},
+		{
+			title: 'Incidents',
+			url: '/incidents',
+			icon: 'lucide:alert-triangle'
+		},
+		{
+			title: 'Notifications',
+			url: '/notifications',
+			icon: 'lucide:bell'
+		},
+		{
+			title: 'Status pages',
+			url: '/status-pages',
+			icon: 'lucide:globe'
+		},
+		{
+			title: 'Teams',
+			url: '/teams',
+			icon: 'lucide:users'
+		},
+		{
+			title: 'Settings',
+			url: '/settings',
+			icon: 'lucide:settings-2'
+		}
+	]
+};
 </script>
 
 <script lang="ts">

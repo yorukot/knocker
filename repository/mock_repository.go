@@ -35,6 +35,12 @@ func (m *MockRepository) GetUserByEmail(ctx context.Context, tx pgx.Tx, email st
 	return user, args.Error(1)
 }
 
+func (m *MockRepository) GetUserByID(ctx context.Context, tx pgx.Tx, userID int64) (*models.User, error) {
+	args := m.Called(ctx, tx, userID)
+	user, _ := args.Get(0).(*models.User)
+	return user, args.Error(1)
+}
+
 func (m *MockRepository) GetAccountByEmail(ctx context.Context, tx pgx.Tx, email string) (*models.Account, error) {
 	args := m.Called(ctx, tx, email)
 	account, _ := args.Get(0).(*models.Account)
