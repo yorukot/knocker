@@ -34,6 +34,105 @@ definitions:
     - email
     - password
     type: object
+  incident.createIncidentEventRequest:
+    properties:
+      event_type:
+        allOf:
+        - $ref: '#/definitions/models.IncidentEventType'
+        enum:
+        - detected
+        - notification_sent
+        - manually_resolved
+        - auto_resolved
+        - unpublished
+        - published
+        - investigating
+        - identified
+        - update
+        - monitoring
+      message:
+        minLength: 1
+        type: string
+      public:
+        type: boolean
+    required:
+    - message
+    type: object
+  incident.createIncidentRequest:
+    properties:
+      message:
+        minLength: 1
+        type: string
+      public:
+        type: boolean
+      started_at:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.IncidentStatus'
+        enum:
+        - detected
+        - investigating
+        - identified
+        - monitoring
+        - resolved
+    type: object
+  incident.updateIncidentStatusRequest:
+    properties:
+      message:
+        type: string
+      public:
+        type: boolean
+      status:
+        allOf:
+        - $ref: '#/definitions/models.IncidentStatus'
+        enum:
+        - detected
+        - investigating
+        - identified
+        - monitoring
+        - resolved
+    required:
+    - status
+    type: object
+  models.IncidentEventType:
+    enum:
+    - detected
+    - notification_sent
+    - manually_resolved
+    - auto_resolved
+    - unpublished
+    - published
+    - investigating
+    - identified
+    - update
+    - monitoring
+    type: string
+    x-enum-varnames:
+    - IncidentEventTypeDetected
+    - IncidentEventTypeNotificationSent
+    - IncidentEventTypeManuallyResolved
+    - IncidentEventTypeAutoResolved
+    - IncidentEventTypeUnpublished
+    - IncidentEventTypePublished
+    - IncidentEventTypeInvestigating
+    - IncidentEventTypeIdentified
+    - IncidentEventTypeUpdate
+    - IncidentEventTypeMonitoring
+  models.IncidentStatus:
+    enum:
+    - detected
+    - investigating
+    - identified
+    - monitoring
+    - resolved
+    type: string
+    x-enum-varnames:
+    - IncidentStatusDetected
+    - IncidentStatusInvestigating
+    - IncidentStatusIdentified
+    - IncidentStatusMonitoring
+    - IncidentStatusResolved
   models.MonitorType:
     enum:
     - http
@@ -265,6 +364,29 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Register a new user
+      tags:
+      - auth
+  /auth/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns 200 when the user is authenticated via access token cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Authenticated
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Check authentication status
       tags:
       - auth
   /teams:
@@ -655,6 +777,293 @@ paths:
       summary: Update a monitor
       tags:
       - monitors
+  /teams/{teamID}/monitors/{monitorID}/incidents:
+    get:
+      description: Lists incidents for a monitor the user has access to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incidents retrieved successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid team or monitor ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Monitor not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: List incidents for a monitor
+      tags:
+      - incidents
+    post:
+      consumes:
+      - application/json
+      description: Manually creates an incident for a monitor the user has access
+        to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      - description: Incident create payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/incident.createIncidentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident created successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Monitor not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: An open incident already exists
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create a new incident
+      tags:
+      - incidents
+  /teams/{teamID}/monitors/{monitorID}/incidents/{incidentID}:
+    get:
+      description: Retrieves a single incident for a monitor the user has access to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident retrieved successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid IDs
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get an incident
+      tags:
+      - incidents
+  /teams/{teamID}/monitors/{monitorID}/incidents/{incidentID}/events:
+    get:
+      description: Lists events for an incident the user has access to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident events retrieved successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid IDs
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: List incident events
+      tags:
+      - incidents
+    post:
+      consumes:
+      - application/json
+      description: Adds a new event to an incident timeline
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      - description: Incident event payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/incident.createIncidentEventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident event created successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create an incident event
+      tags:
+      - incidents
+  /teams/{teamID}/monitors/{monitorID}/incidents/{incidentID}/status:
+    post:
+      consumes:
+      - application/json
+      description: Updates an incident's status and records a timeline event
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Monitor ID
+        in: path
+        name: monitorID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      - description: Incident status payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/incident.updateIncidentStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident status updated successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Update incident status
+      tags:
+      - incidents
   /teams/{teamID}/notifications:
     get:
       description: Lists notifications for a team the user belongs to

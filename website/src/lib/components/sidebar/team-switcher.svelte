@@ -2,11 +2,9 @@
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { useSidebar } from "$lib/components/ui/sidebar/index.js";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
-  import PlusIcon from "@lucide/svelte/icons/plus";
-  // This should be `Component` after @lucide/svelte updates types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let { teams }: { teams: { name: string; logo: any; plan: string }[] } = $props();
+  import Icon from '@iconify/svelte';
+
+  let { teams }: { teams: { name: string; logo: string; plan: string }[] } = $props();
   const sidebar = useSidebar();
   let activeTeam = $derived(teams[0]);
 </script>
@@ -23,7 +21,7 @@
             <div
               class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
             >
-              <activeTeam.logo class="size-4" />
+              <Icon icon={activeTeam.logo} class="size-4" />
             </div>
             <div class="grid flex-1 text-start text-sm leading-tight">
               <span class="truncate font-medium">
@@ -31,7 +29,7 @@
               </span>
               <span class="truncate text-xs">{activeTeam.plan}</span>
             </div>
-            <ChevronsUpDownIcon class="ms-auto" />
+            <Icon icon="lucide:chevron-up" class="ms-auto" />
           </Sidebar.MenuButton>
         {/snippet}
       </DropdownMenu.Trigger>
@@ -45,7 +43,7 @@
         {#each teams as team, index (team.name)}
           <DropdownMenu.Item onSelect={() => (activeTeam = team)} class="gap-2 p-2">
             <div class="flex size-6 items-center justify-center rounded-md border">
-              <team.logo class="size-3.5 shrink-0" />
+              <Icon icon={activeTeam.logo} class="size-3.5 shrink-0" />
             </div>
             {team.name}
             <DropdownMenu.Shortcut>⌘{index + 1}</DropdownMenu.Shortcut>
@@ -56,7 +54,7 @@
           <div
             class="flex size-6 items-center justify-center rounded-md border bg-transparent"
           >
-            <PlusIcon class="size-4" />
+            <Icon icon="lucide:plus" class="ms-auto" />
           </div>
           <div class="text-muted-foreground font-medium">Add team</div>
         </DropdownMenu.Item>

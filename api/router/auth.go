@@ -24,6 +24,7 @@ func AuthRouter(api *echo.Group, repo repository.Repository) {
 	r.GET("/oauth/:provider", authHandler.OAuthEntry, middleware.AuthOptionalMiddleware)
 	r.GET("/oauth/:provider/callback", authHandler.OAuthCallback)
 
+	r.GET("/status", authHandler.Status, middleware.AuthRequiredMiddleware)
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
 	r.POST("/refresh", authHandler.RefreshToken)
