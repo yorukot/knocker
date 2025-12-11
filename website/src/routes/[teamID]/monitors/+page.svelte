@@ -54,7 +54,7 @@
 			frequency: 'Paused',
 			uptime: '—',
 			responseTime: '—',
-			lastChecked: 'Paused 1h ago',
+			lastChecked: '1h ago',
 			lastIncident: 'Maintenance window'
 		}
 	];
@@ -63,11 +63,7 @@
 <section class="space-y-6">
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div class="space-y-1">
-			<p class="text-sm font-medium text-primary">Monitors</p>
-			<h1 class="text-2xl font-semibold leading-tight text-foreground">Monitor overview</h1>
-			<p class="text-sm text-muted-foreground">
-				Keep an eye on uptime, latency, and recent incidents across every check.
-			</p>
+			<h1 class="text-2xl font-semibold leading-tight text-foreground">Monitors</h1>
 		</div>
 		<Button class="ms-auto" size="lg">
 			<Icon icon="ri:add-line" class="size-4" />
