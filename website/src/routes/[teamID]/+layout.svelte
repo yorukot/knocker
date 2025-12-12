@@ -31,7 +31,7 @@
 		});
 
 		rest.slice(1).forEach((segment, index) => {
-			const href = `/${[teamId, ...rest.slice(0, index + 1)].join('/')}`;
+			const href = `/${[teamId, ...rest.slice(0, index + 2)].join('/')}`;
 			items.push({ label: formatSegment(segment), href });
 		});
 

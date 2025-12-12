@@ -11,25 +11,24 @@
 	let { teams, activeTeamId }: { teams: Team[]; activeTeamId?: string } = $props();
 	const sidebar = useSidebar();
 
-	let activeTeam = $derived(
-		teams.find((team) => team.id === activeTeamId) ?? teams[0]
-	);
+	let activeTeam = $derived(teams.find((team) => team.id === activeTeamId) ?? teams[0]);
 
 	const avatarMap = $derived(
-		teams.reduce((acc, team) => {
-			const key = team.id ?? team.name;
-			const avatarSvg = createAvatar(shapes, {
-				seed: key
-			}).toString();
+		teams.reduce(
+			(acc, team) => {
+				const key = team.id ?? team.name;
+				const avatarSvg = createAvatar(shapes, {
+					seed: key
+				}).toString();
 
-			acc[key] = `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg)}`;
-			return acc;
-		}, {} as Record<string, string>)
+				acc[key] = `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg)}`;
+				return acc;
+			},
+			{} as Record<string, string>
+		)
 	);
 
-	const activeTeamAvatar = $derived(
-		avatarMap[activeTeam.id ?? activeTeam.name]
-	);
+	const activeTeamAvatar = $derived(avatarMap[activeTeam.id ?? activeTeam.name]);
 </script>
 
 <Sidebar.Menu>
@@ -43,18 +42,14 @@
 						class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground select-none"
 					>
 						<div
-							class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden"
+							class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
 						>
-							{#if activeTeam.logo}
-								<Icon icon={activeTeam.logo} class="size-4" />
-							{:else}
-								<img
-									src={activeTeamAvatar}
-									alt={activeTeam.name}
-									class="size-full object-cover"
-									loading="lazy"
-								/>
-							{/if}
+							<img
+								src={activeTeamAvatar}
+								alt={activeTeam.name}
+								class="size-full object-cover rounded-lg"
+								loading="lazy"
+							/>
 						</div>
 						<div class="grid flex-1 text-start text-sm leading-tight">
 							<span class="truncate font-medium">
