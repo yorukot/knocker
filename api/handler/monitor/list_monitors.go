@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/yorukot/knocker/models"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
@@ -27,6 +28,8 @@ func (h *MonitorHandler) ListMonitors(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid team ID")
 	}
+
+	const incidentLimit = 5
 
 	userID, err := authutil.GetUserIDFromContext(c)
 	if err != nil {
@@ -61,9 +64,27 @@ func (h *MonitorHandler) ListMonitors(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list monitors")
 	}
 
+	monitorsWithIncidents := make([]models.MonitorWithIncidents, 0, len(monitors))
+	for _, monitor := range monitors {
+		incidents, err := h.Repo.ListIncidentsByMonitorID(c.Request().Context(), tx, monitor.ID)
+		if err != nil {
+			zap.L().Error("Failed to list incidents for monitor", zap.Error(err), zap.Int64("monitor_id", monitor.ID))
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list incidents for monitor")
+		}
+
+		if len(incidents) > incidentLimit {
+			incidents = incidents[:incidentLimit]
+		}
+
+		monitorsWithIncidents = append(monitorsWithIncidents, models.MonitorWithIncidents{
+			Monitor:   monitor,
+			Incidents: incidents,
+		})
+	}
+
 	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
-	return c.JSON(http.StatusOK, response.Success("Monitors retrieved successfully", newMonitorResponses(monitors)))
+	return c.JSON(http.StatusOK, response.Success("Monitors retrieved successfully", newMonitorResponsesWithIncidents(monitorsWithIncidents)))
 }
