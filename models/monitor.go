@@ -53,6 +53,12 @@ type Monitor struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
+// MonitorWithIncidents decorates a monitor with its recent incidents for list views.
+type MonitorWithIncidents struct {
+	Monitor
+	Incidents []Incident `json:"incidents,omitempty" db:"incidents"`
+}
+
 // HTTPConfig decodes the monitor config into an HTTPMonitorConfig.
 func (m Monitor) HTTPConfig() (*monitorm.HTTPMonitorConfig, error) {
 	if m.Type != MonitorTypeHTTP {

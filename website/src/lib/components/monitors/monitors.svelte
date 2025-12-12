@@ -6,34 +6,12 @@
 	import { Card, CardContent, CardTitle } from '$lib/components/ui/card/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 
-	type MonitorStatus = 'operational' | 'degraded' | 'down' | 'paused';
-	type MonitorType = 'HTTP' | 'Ping' | 'TCP';
-	type MonitorIncidentStatus = 'investigating' | 'identified' | 'monitoring' | 'resolved';
-	type MonitorIncidentSeverity = 'critical' | 'major' | 'minor' | 'maintenance';
-
-	type MonitorIncident = {
-		id: string;
-		status: MonitorIncidentStatus;
-		severity: MonitorIncidentSeverity;
-		updatedAt: string;
-		summary: string;
-		link: string;
-	};
-
-	type Monitor = {
-		id: string;
-		name: string;
-		target: string;
-		type: MonitorType;
-		status: MonitorStatus;
-		regions: string[];
-		frequency: string;
-		uptime: string;
-		responseTime: string;
-		lastChecked: string;
-		lastIncident: string;
-		incident?: MonitorIncident;
-	};
+	import type {
+		MonitorIncidentSeverity,
+		MonitorIncidentStatus,
+		MonitorListItem as Monitor,
+		MonitorStatus
+	} from '../../../types/monitor';
 
 	const statusStyles: Record<
 		MonitorStatus,

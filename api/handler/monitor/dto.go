@@ -21,8 +21,19 @@ type monitorResponse struct {
 	FailureThreshold  int16              `json:"failure_threshold"`
 	RecoveryThreshold int16              `json:"recovery_threshold"`
 	NotificationIDs   []string           `json:"notification"`
+	Incidents         []incidentResponse `json:"incidents,omitempty"`
 	UpdatedAt         time.Time          `json:"updated_at"`
 	CreatedAt         time.Time          `json:"created_at"`
+}
+
+type incidentResponse struct {
+	ID         string                `json:"id"`
+	MonitorID  string                `json:"monitor_id"`
+	Status     models.IncidentStatus `json:"status"`
+	StartedAt  time.Time             `json:"started_at"`
+	ResolvedAt *time.Time            `json:"resolved_at,omitempty"`
+	CreatedAt  time.Time             `json:"created_at"`
+	UpdatedAt  time.Time             `json:"updated_at"`
 }
 
 type notificationIDList []int64
@@ -89,15 +100,30 @@ func newMonitorResponse(m models.Monitor) monitorResponse {
 		FailureThreshold:  m.FailureThreshold,
 		RecoveryThreshold: m.RecoveryThreshold,
 		NotificationIDs:   formatNotificationIDs(m.NotificationIDs),
+		Incidents:         []incidentResponse{},
 		UpdatedAt:         m.UpdatedAt,
 		CreatedAt:         m.CreatedAt,
 	}
+}
+
+func newMonitorResponseWithIncidents(m models.MonitorWithIncidents) monitorResponse {
+	resp := newMonitorResponse(m.Monitor)
+	resp.Incidents = formatIncidents(m.Incidents)
+	return resp
 }
 
 func newMonitorResponses(monitors []models.Monitor) []monitorResponse {
 	responses := make([]monitorResponse, len(monitors))
 	for i, monitor := range monitors {
 		responses[i] = newMonitorResponse(monitor)
+	}
+	return responses
+}
+
+func newMonitorResponsesWithIncidents(monitors []models.MonitorWithIncidents) []monitorResponse {
+	responses := make([]monitorResponse, len(monitors))
+	for i, monitor := range monitors {
+		responses[i] = newMonitorResponseWithIncidents(monitor)
 	}
 	return responses
 }
@@ -110,6 +136,26 @@ func formatNotificationIDs(ids []int64) []string {
 	result := make([]string, len(ids))
 	for i, id := range ids {
 		result[i] = strconv.FormatInt(id, 10)
+	}
+	return result
+}
+
+func formatIncidents(incidents []models.Incident) []incidentResponse {
+	if len(incidents) == 0 {
+		return []incidentResponse{}
+	}
+
+	result := make([]incidentResponse, len(incidents))
+	for i, incident := range incidents {
+		result[i] = incidentResponse{
+			ID:         strconv.FormatInt(incident.ID, 10),
+			MonitorID:  strconv.FormatInt(incident.MonitorID, 10),
+			Status:     incident.Status,
+			StartedAt:  incident.StartedAt,
+			ResolvedAt: incident.ResolvedAt,
+			CreatedAt:  incident.CreatedAt,
+			UpdatedAt:  incident.UpdatedAt,
+		}
 	}
 	return result
 }
