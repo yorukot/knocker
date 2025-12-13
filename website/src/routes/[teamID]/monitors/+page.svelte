@@ -5,7 +5,11 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import type { PageData } from './$types';
 
+	import { page } from '$app/state';
+
 	let { data }: { data: PageData } = $props();
+
+	const teamId = $derived(page.params.teamID);
 </script>
 
 <section class="space-y-6">
@@ -13,7 +17,7 @@
 		<div class="space-y-1">
 			<h1 class="text-2xl font-semibold leading-tight text-foreground">Monitors</h1>
 		</div>
-		<Button class="ms-auto" size="lg">
+		<Button class="ms-auto" size="lg" href={`/${teamId}/monitors/create`}>
 			<Icon icon="ri:add-line" class="size-4" />
 			Create monitor
 		</Button>
