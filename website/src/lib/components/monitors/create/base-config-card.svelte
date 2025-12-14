@@ -6,11 +6,13 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
-	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
 
 	import type { SuperForm } from 'sveltekit-superforms';
 	import type { MonitorCreate } from '$lib/schemas/monitor';
 	import type { MonitorKind } from '../../../../types/monitor-create';
+	import type { ApiNotification } from '$lib/api/notification';
 
 	type TypeOption = {
 		id: MonitorKind;
@@ -22,12 +24,14 @@
 		form,
 		type,
 		typeOptions = [] as TypeOption[],
-		handleTypeChange
+		handleTypeChange,
+		notifications = []
 	}: {
 		form: SuperForm<MonitorCreate>;
 		type: MonitorKind;
 		typeOptions?: TypeOption[];
 		handleTypeChange: (next: MonitorKind) => void;
+		notifications?: ApiNotification[];
 	} = $props();
 
 	const formData = $derived(form.form);
@@ -36,22 +40,37 @@
 		{ label: '30s', value: 30 },
 		{ label: '1m', value: 60 },
 		{ label: '3m', value: 180 },
-		{ label: '5m', value: 300 },
+		{ label: '5m', value: 300 }
 	];
 
-	let notificationInput = $state($formData.notification.join(', '));
+	let notificationPopoverOpen = $state(false);
 
-	$effect(() => {
-		const joined = $formData.notification.join(', ');
-		if (joined !== notificationInput) notificationInput = joined;
-	});
+	const selectedNotifications = $derived(
+		notifications.filter((n) => $formData.notification.includes(n.id))
+	);
 
-	$effect(() => {
-		$formData.notification = notificationInput
-			.split(',')
-			.map((id) => id.trim())
-			.filter(Boolean);
-	});
+	function toggleNotification(notificationId: string) {
+		if ($formData.notification.includes(notificationId)) {
+			$formData.notification = $formData.notification.filter((id) => id !== notificationId);
+		} else {
+			$formData.notification = [...$formData.notification, notificationId];
+		}
+	}
+
+	function removeNotification(notificationId: string) {
+		$formData.notification = $formData.notification.filter((id) => id !== notificationId);
+	}
+
+	function getNotificationIcon(type: string) {
+		switch (type) {
+			case 'discord':
+				return 'ri:discord-fill';
+			case 'telegram':
+				return 'ri:telegram-fill';
+			default:
+				return 'lucide:bell';
+		}
+	}
 </script>
 
 <Card>
@@ -166,12 +185,84 @@
 
 		<Field.Group>
 			<Field.Field>
-				<Field.Label>Notification channel IDs</Field.Label>
+				<Field.Label>Notification channels</Field.Label>
 				<Field.Content class="space-y-2">
-					<Textarea bind:value={notificationInput} rows={2} placeholder="12345, 67890" />
+					<Popover.Root bind:open={notificationPopoverOpen}>
+						<Popover.Trigger
+							class="flex h-9 w-full items-center justify-between gap-2 whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm shadow-xs outline-none transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+							role="combobox"
+							aria-expanded={notificationPopoverOpen}
+						>
+							<span class="truncate">
+								{selectedNotifications.length > 0
+									? `${selectedNotifications.length} selected`
+									: 'Select channels...'}
+							</span>
+							<Icon icon="lucide:chevrons-up-down" class="ml-2 size-4 shrink-0 opacity-50" />
+						</Popover.Trigger>
+						<Popover.Content class="w-[--bits-popover-trigger-width] p-2" align="start">
+							{#if notifications.length === 0}
+								<div class="py-6 text-center text-sm">
+									<Icon icon="lucide:bell-off" class="mx-auto mb-2 size-8 text-muted-foreground" />
+									<p class="text-muted-foreground">No notification channels found</p>
+									<p class="mt-1 text-xs text-muted-foreground">
+										Create one in your team settings first
+									</p>
+								</div>
+							{:else}
+								<div class="max-h-[300px] space-y-1 overflow-y-auto">
+									{#each notifications as notification (notification.id)}
+										<button
+											type="button"
+											class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent"
+											onclick={() => toggleNotification(notification.id)}
+										>
+											<div
+												class={`flex size-4 shrink-0 items-center justify-center rounded-sm border border-primary ${
+													$formData.notification.includes(notification.id)
+														? 'bg-primary text-primary-foreground'
+														: 'opacity-50 [&_svg]:invisible'
+												}`}
+											>
+												<Icon icon="lucide:check" class="size-3" />
+											</div>
+											<Icon
+												icon={getNotificationIcon(notification.type)}
+												class="size-4 shrink-0 text-muted-foreground"
+											/>
+											<span class="flex-1 truncate text-left">{notification.name}</span>
+											<Badge variant="secondary" class="text-xs capitalize">
+												{notification.type}
+											</Badge>
+										</button>
+									{/each}
+								</div>
+							{/if}
+						</Popover.Content>
+					</Popover.Root>
+
+					{#if selectedNotifications.length > 0}
+						<div class="flex flex-wrap gap-2">
+							{#each selectedNotifications as notification (notification.id)}
+								<Badge variant="secondary" class="gap-1.5 pr-1">
+									<Icon icon={getNotificationIcon(notification.type)} class="size-3" />
+									<span class="truncate">{notification.name}</span>
+									<button
+										type="button"
+										class="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+										onclick={() => removeNotification(notification.id)}
+										aria-label={`Remove ${notification.name}`}
+									>
+										<Icon icon="lucide:x" class="size-3" />
+									</button>
+								</Badge>
+							{/each}
+						</div>
+					{/if}
+
 					<Field.Description>
-						Comma-separated IDs matching the backend notification resources. Leave blank to wire
-						later.
+						Select notification channels to alert when this monitor fails or recovers. You can add
+						multiple channels.
 					</Field.Description>
 				</Field.Content>
 			</Field.Field>

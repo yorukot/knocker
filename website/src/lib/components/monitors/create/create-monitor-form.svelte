@@ -10,7 +10,10 @@
 
 	import type { MonitorKind } from '../../../../types/monitor-create';
 
-	let { teamId }: { teamId: string } = $props();
+	import type { ApiNotification } from '$lib/api/notification';
+
+	let { teamId, notifications = [] }: { teamId: string; notifications?: ApiNotification[] } =
+		$props();
 	// teamId will be used for API submission: POST to `/api/teams/${teamId}/monitors`
 
 	const initialData: MonitorCreate = {
@@ -100,6 +103,7 @@
 			type={$formData.type}
 			{typeOptions}
 			{handleTypeChange}
+			{notifications}
 		/>
 
 		{#if $formData.type === 'http'}

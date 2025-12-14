@@ -1,13 +1,17 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
+	import Icon from '@iconify/svelte';
 
-	import CreateMonitorForm from "$lib/components/monitors/create/create-monitor-form.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Separator } from "$lib/components/ui/separator/index.js";
+	import CreateMonitorForm from '$lib/components/monitors/create/create-monitor-form.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
 
-	import { page } from "$app/state";
+	import { page } from '$app/state';
+	import type { ApiNotification } from '$lib/api/notification';
 
-	const teamId = $derived(page.params.teamID);
+	let { data }: { data?: { notifications?: ApiNotification[] } } = $props();
+
+	const teamId = $derived(page.params.teamID ?? '');
+	const notifications = $derived(data?.notifications ?? []);
 </script>
 
 <svelte:head>
@@ -27,5 +31,5 @@
 
 	<Separator />
 
-	<CreateMonitorForm {teamId} />
+	<CreateMonitorForm {teamId} {notifications} />
 </section>
