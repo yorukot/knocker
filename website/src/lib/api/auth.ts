@@ -1,35 +1,49 @@
-import { apiFetch, buildApiUrl, type ApiResponse } from './client';
+import { PUBLIC_API_BASE } from '$env/static/public';
+import { apiRequest, type ApiDefaultBody } from './utils';
 
-const AUTH_BASE_PATH = '/api/auth';
+let refreshPromise: Promise<boolean> | null = null;
 
-export const refreshAccessToken = async () =>
-	apiFetch<never>(`${AUTH_BASE_PATH}/refresh`, {
-		method: 'POST'
-	});
+export async function refreshToken(): Promise<boolean> {
+	if (!refreshPromise) {
+		refreshPromise = fetch(`${PUBLIC_API_BASE}/auth/refresh`, {
+			method: 'POST',
+			credentials: 'include'
+		})
+			.then((res) => res.ok)
+			.finally(() => {
+				refreshPromise = null;
+			});
+	}
 
-export const login = async (email: string, password: string) => {
-	const { body } = await apiFetch<never>(`${AUTH_BASE_PATH}/login`, {
+	return refreshPromise;
+}
+
+export function buildOAuthUrl(provider: string, next: string = '/'): string {
+	const params = new URLSearchParams();
+	if (next) {
+		params.set('next', next);
+	}
+
+	const queryString = params.toString();
+	return `${PUBLIC_API_BASE}/auth/oauth/${provider}${queryString ? `?${queryString}` : ''}`;
+}
+
+export async function login(email: string, password: string): Promise<ApiDefaultBody> {
+	return apiRequest<ApiDefaultBody>('/auth/login', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email, password })
+		body: { email, password },
+		defaultError: 'Login failed'
 	});
+}
 
-	return body;
-};
-
-export const registerUser = async (displayName: string, email: string, password: string) => {
-	const { body } = await apiFetch<never>(`${AUTH_BASE_PATH}/register`, {
+export async function registerUser(
+	displayName: string,
+	email: string,
+	password: string
+): Promise<ApiDefaultBody> {
+	return apiRequest<ApiDefaultBody>('/auth/register', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ display_name: displayName, email, password })
+		body: { display_name: displayName, email, password },
+		defaultError: 'Registration failed'
 	});
-
-	return body;
-};
-
-export const buildOAuthUrl = (provider: string, nextPath = '/') => {
-	const params = new URLSearchParams({ next: nextPath });
-	return `${buildApiUrl(`${AUTH_BASE_PATH}/oauth/${provider}`)}?${params.toString()}`;
-};
-
-export type AuthResponse<T> = ApiResponse<T>;
+}

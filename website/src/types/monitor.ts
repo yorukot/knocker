@@ -1,62 +1,34 @@
-export type ApiMonitorIncidentStatus =
-	| 'detected'
-	| 'investigating'
-	| 'identified'
-	| 'monitoring'
-	| 'resolved';
+// ============================================================================
+// Monitor Types
+// ============================================================================
 
-export type ApiMonitorIncident = {
-	id: string;
-	monitor_id: string;
-	status: ApiMonitorIncidentStatus;
-	started_at: string;
-	resolved_at?: string | null;
-	created_at: string;
-	updated_at: string;
-};
+import type { HTTPMonitorConfig, PingMonitorConfig } from './monitor-config';
+import type { Incident } from './incident';
 
-export type ApiMonitor = {
+export type MonitorType = 'http' | 'ping';
+
+export interface Monitor {
 	id: string;
-	team_id: string;
+	teamId: string;
 	name: string;
-	type: 'http' | 'ping' | string;
-	config: unknown;
-	interval: number;
-	last_checked: string;
-	next_check: string;
-	failure_threshold: number;
-	recovery_threshold: number;
-	notification: string[];
-	incidents?: ApiMonitorIncident[];
-	updated_at: string;
-	created_at: string;
-};
-
-export type MonitorStatus = 'operational' | 'degraded' | 'down' | 'paused';
-export type MonitorType = 'HTTP' | 'Ping' | 'TCP';
-export type MonitorIncidentStatus = 'investigating' | 'identified' | 'monitoring' | 'resolved';
-export type MonitorIncidentSeverity = 'critical' | 'major' | 'minor' | 'maintenance';
-
-export type MonitorIncident = {
-	id: string;
-	status: MonitorIncidentStatus;
-	severity: MonitorIncidentSeverity;
-	updatedAt: string;
-	summary: string;
-	link: string;
-};
-
-export type MonitorListItem = {
-	id: string;
-	name: string;
-	target: string;
 	type: MonitorType;
-	status: MonitorStatus;
-	regions: string[];
-	frequency: string;
-	uptime: string;
-	responseTime: string;
+	config: HTTPMonitorConfig | PingMonitorConfig;
+	interval: number;
 	lastChecked: string;
-	lastIncident: string;
-	incident?: MonitorIncident;
-};
+	nextCheck: string;
+	failureThreshold: number;
+	recoveryThreshold: number;
+	notification: string[];
+	updatedAt: string;
+	createdAt: string;
+}
+
+export interface MonitorWithIncidents extends Monitor {
+	incidents?: Incident[];
+}
+
+export interface MonitorNotification {
+	id: string;
+	monitorId: string;
+	notificationId: string;
+}

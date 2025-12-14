@@ -23,16 +23,9 @@
 		...restProps
 	}: ToggleGroupPrimitive.RootProps & ToggleVariants = $props();
 
-	const toggleGroupCtx = $state<Pick<ToggleVariants, "variant" | "size">>({
-		variant: "default",
-		size: "default",
-	});
-
-	setToggleGroupCtx(toggleGroupCtx);
-
-	$effect(() => {
-		toggleGroupCtx.variant = variant;
-		toggleGroupCtx.size = size;
+	setToggleGroupCtx({
+		variant,
+		size,
 	});
 </script>
 

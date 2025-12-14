@@ -5,30 +5,37 @@
 	import Icon from '@iconify/svelte';
 	import { createAvatar } from '@dicebear/core';
 	import { shapes } from '@dicebear/collection';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import type { Team } from '../../../types';
 
-	type Team = { id?: string; name: string; logo?: string; plan?: string };
+	const teamID = page.params.teamID;
+	let { teams }: { teams: Team[] } = $props();
 
-	let { teams, activeTeamId }: { teams: Team[]; activeTeamId?: string } = $props();
 	const sidebar = useSidebar();
 
-	let activeTeam = $derived(teams.find((team) => team.id === activeTeamId) ?? teams[0]);
+	const activeTeam = $derived.by(() => {
+		return teams.find((team) => team.id === teamID) ?? teams[0];
+	});
 
-	const avatarMap = $derived(
-		teams.reduce(
-			(acc, team) => {
+	const avatarMap = $derived.by(() => {
+		return Object.fromEntries(
+			teams.map((team) => {
 				const key = team.id ?? team.name;
-				const avatarSvg = createAvatar(shapes, {
-					seed: key
-				}).toString();
 
-				acc[key] = `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg)}`;
-				return acc;
-			},
-			{} as Record<string, string>
-		)
-	);
+				const svg = createAvatar(shapes, { seed: key }).toString();
+				const avatar = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
-	const activeTeamAvatar = $derived(avatarMap[activeTeam.id ?? activeTeam.name]);
+				return [key, avatar];
+			})
+		) as Record<string, string>;
+	});
+
+	const activeTeamAvatar = $derived.by(() => {
+		const team = activeTeam;
+		const key = team.id ?? team.name;
+		return avatarMap[key];
+	});
 </script>
 
 <Sidebar.Menu>
@@ -68,18 +75,9 @@
 			>
 				<DropdownMenu.Label class="text-muted-foreground text-xs">Teams</DropdownMenu.Label>
 				{#each teams as team, index (team.name)}
-					<DropdownMenu.Item onSelect={() => (activeTeam = team)} class="gap-2 p-2">
+					<DropdownMenu.Item onSelect={() => goto(`/${team.id}`)} class="gap-2 p-2">
 						<div class="flex size-6 items-center justify-center">
-							{#if team.logo}
-								<Icon icon={team.logo} class="size-3.5 shrink-0" />
-							{:else}
-								<img
-									src={avatarMap[team.id ?? team.name]}
-									alt={team.name}
-									class="rounded-sm"
-									loading="lazy"
-								/>
-							{/if}
+							<img src={avatarMap[team.id]} alt={team.name} class="rounded-sm" loading="lazy" />
 						</div>
 						<span class="truncate">{team.name}</span>
 						<DropdownMenu.Shortcut>⌘{index + 1}</DropdownMenu.Shortcut>

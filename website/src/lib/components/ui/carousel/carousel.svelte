@@ -3,8 +3,6 @@
 		type CarouselAPI,
 		type CarouselProps,
 		type EmblaContext,
-		type CarouselOptions,
-		type CarouselPlugins,
 		setEmblaContext,
 	} from "./context.js";
 	import { cn, type WithElementRef } from "$lib/utils.js";
@@ -24,12 +22,12 @@
 		api: undefined,
 		scrollPrev,
 		scrollNext,
-		orientation: "horizontal",
+		orientation,
 		canScrollNext: false,
 		canScrollPrev: false,
 		handleKeyDown,
-		options: {} as CarouselOptions,
-		plugins: [] as CarouselPlugins,
+		options: opts,
+		plugins,
 		onInit,
 		scrollSnaps: [],
 		selectedIndex: 0,
@@ -37,13 +35,6 @@
 	});
 
 	setEmblaContext(carouselState);
-
-	// Keep internal state in sync with incoming props.
-	$effect(() => {
-		carouselState.orientation = orientation;
-		carouselState.options = opts;
-		carouselState.plugins = plugins;
-	});
 
 	function scrollPrev() {
 		carouselState.api?.scrollPrev();

@@ -11,60 +11,37 @@
 		FieldLabel,
 		FieldDescription
 	} from '$lib/components/ui/field/index.js';
-	import { z } from 'zod';
+	import { validator } from '@felte/validator-zod';
+	import * as z from 'zod';
+	import { createForm } from 'felte';
 
 	const inBrowser = typeof window !== 'undefined';
-
-	let redirectTo = $state('/');
-	const form = $state({
-		email: '',
-		password: '',
-		loading: false,
-		error: '',
-		success: ''
-	});
 
 	const loginSchema = z.object({
 		email: z.email().max(255),
 		password: z.string().min(8).max(255)
 	});
 
+	let redirectTo = '/';
 	if (inBrowser) {
 		const url = new URL(window.location.href);
 		redirectTo = url.searchParams.get('next') ?? '/';
 	}
 
-	const handleSubmit = async (event: Event) => {
-		event.preventDefault();
-		form.error = '';
-		form.success = '';
-
-		const parsed = loginSchema.safeParse({
-			email: form.email.trim(),
-			password: form.password
-		});
-
-		if (!parsed.success) {
-			form.error = parsed.error.issues[0]?.message ?? 'Please check your inputs.';
-			return;
-		}
-
-		form.loading = true;
-
-		try {
-			await login(parsed.data.email, parsed.data.password);
-			form.success = 'Logged in successfully.';
-
-			if (inBrowser) {
+	const { form, errors, isSubmitting } = createForm({
+		extend: validator({ schema: loginSchema }),
+		onSubmit: async (values) => {
+			try {
+				await login(values.email, values.password);
 				await goto(redirectTo);
+			} catch (error) {
+				return {
+					FORM_ERROR:
+						error instanceof Error ? error.message : 'Unable to log in right now. Please try again.'
+				};
 			}
-		} catch (error) {
-			form.error =
-				error instanceof Error ? error.message : 'Unable to log in right now. Please try again.';
-		} finally {
-			form.loading = false;
 		}
-	};
+	});
 
 	const handleGoogle = () => {
 		if (!inBrowser) return;
@@ -78,7 +55,7 @@
 		<Card.Description>Enter your email below to login to your account</Card.Description>
 	</Card.Header>
 	<Card.Content>
-		<form class="space-y-4" onsubmit={handleSubmit}>
+		<form use:form class="space-y-4">
 			<FieldGroup>
 				<Field>
 					<FieldLabel for="email">Email</FieldLabel>
@@ -88,10 +65,15 @@
 						type="email"
 						placeholder="m@example.com"
 						autocomplete="email"
-						bind:value={form.email}
 						required
 					/>
+					{#if $errors.email}
+						<FieldDescription class="text-destructive">
+							{$errors.email[0]}
+						</FieldDescription>
+					{/if}
 				</Field>
+
 				<Field>
 					<div class="flex items-center">
 						<FieldLabel for="password">Password</FieldLabel>
@@ -102,29 +84,34 @@
 						name="password"
 						type="password"
 						autocomplete="current-password"
-						bind:value={form.password}
 						required
 					/>
+					{#if $errors.password}
+						<FieldDescription class="text-destructive">
+							{$errors.password[0]}
+						</FieldDescription>
+					{/if}
 				</Field>
-				{#if form.error}
-					<FieldDescription class="text-destructive" data-invalid="true">
-						{form.error}
-					</FieldDescription>
-				{:else if form.success}
-					<FieldDescription class="text-emerald-600 dark:text-emerald-400">
-						{form.success}
+
+				{#if $errors.FORM_ERROR}
+					<FieldDescription class="text-destructive text-center">
+						{$errors.FORM_ERROR}
 					</FieldDescription>
 				{/if}
+
 				<Field>
-					<Button type="submit" class="w-full" disabled={form.loading}>
-						{form.loading ? 'Logging in...' : 'Login'}
+					<Button type="submit" class="w-full" disabled={$isSubmitting}>
+						{$isSubmitting ? 'Logging in...' : 'Login'}
 					</Button>
+
 					<Button type="button" variant="outline" class="w-full" onclick={handleGoogle}>
 						<Icon icon="ri:google-fill" class="size-5" />
 						Login with Google
 					</Button>
+
 					<FieldDescription class="text-center">
-						Don't have an account? <a href="/auth/register">Sign up</a>
+						Don't have an account?
+						<a href="/auth/register">Sign up</a>
 					</FieldDescription>
 				</Field>
 			</FieldGroup>

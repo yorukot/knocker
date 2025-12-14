@@ -1,14 +1,11 @@
-import { apiFetch, type ApiResponse } from './client';
+import type { User } from '../../types';
+import { apiRequest } from './utils';
 
-type User = {
-	id: string;
-	display_name: string;
-	avatar?: string | null;
+export type UserResponse = {
+	message: string;
+	data: User;
 };
 
-export type UserResponse = ApiResponse<User>;
-
-export const getCurrentUser = async () => {
-	const { response, body } = await apiFetch<User>('/api/users/me');
-	return { response, body };
-};
+export function getUser(): Promise<UserResponse> {
+	return apiRequest<UserResponse>("/users/me", { defaultError: 'Failed to fetch user' });
+}

@@ -6,21 +6,18 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import Icon from '@iconify/svelte';
-	import type { ComponentProps } from 'svelte';
+
+	import { createForm } from 'felte';
+	import { validator } from '@felte/validator-zod';
 	import { z } from 'zod';
 
-	let { ...restProps }: ComponentProps<typeof Card.Root> = $props();
 	const inBrowser = typeof window !== 'undefined';
-	let redirectTo = $state('/');
-	const form = $state({
-		displayName: '',
-		email: '',
-		password: '',
-		confirmPassword: '',
-		loading: false,
-		error: '',
-		success: ''
-	});
+
+	let redirectTo = '/';
+	if (inBrowser) {
+		const url = new URL(window.location.href);
+		redirectTo = url.searchParams.get('next') ?? '/';
+	}
 
 	const signupSchema = z
 		.object({
@@ -29,49 +26,27 @@
 			password: z.string().min(8).max(255),
 			confirmPassword: z.string().min(8).max(255)
 		})
-		.refine((value) => value.password === value.confirmPassword, {
+		.refine((data) => data.password === data.confirmPassword, {
 			path: ['confirmPassword'],
 			message: 'Passwords do not match.'
 		});
 
-	if (inBrowser) {
-		const url = new URL(window.location.href);
-		redirectTo = url.searchParams.get('next') ?? '/';
-	}
-
-	const handleSubmit = async (event: Event) => {
-		event.preventDefault();
-		form.error = '';
-		form.success = '';
-
-		const parsed = signupSchema.safeParse({
-			displayName: form.displayName.trim(),
-			email: form.email.trim(),
-			password: form.password,
-			confirmPassword: form.confirmPassword
-		});
-
-		if (!parsed.success) {
-			form.error = parsed.error.issues[0]?.message ?? 'Please check your inputs.';
-			return;
-		}
-
-		form.loading = true;
-
-		try {
-			await registerUser(parsed.data.displayName, parsed.data.email, parsed.data.password);
-			form.success = 'Account created. Redirecting...';
-
-			if (inBrowser) {
+	const { form, errors, isSubmitting } = createForm({
+		extend: validator({ schema: signupSchema }),
+		onSubmit: async (values) => {
+			try {
+				await registerUser(values.displayName, values.email, values.password);
 				await goto(redirectTo);
+			} catch (error) {
+				return {
+					FORM_ERROR:
+						error instanceof Error
+							? error.message
+							: 'Unable to sign up right now. Please try again.'
+				};
 			}
-		} catch (error) {
-			form.error =
-				error instanceof Error ? error.message : 'Unable to sign up right now. Please try again.';
-		} finally {
-			form.loading = false;
 		}
-	};
+	});
 
 	const handleGoogle = () => {
 		if (!inBrowser) return;
@@ -79,26 +54,32 @@
 	};
 </script>
 
-<Card.Root {...restProps}>
+<Card.Root>
 	<Card.Header>
 		<Card.Title>Create an account</Card.Title>
 		<Card.Description>Enter your information below to create your account</Card.Description>
 	</Card.Header>
+
 	<Card.Content>
-		<form class="space-y-4" onsubmit={handleSubmit}>
+		<form use:form class="space-y-4">
 			<Field.Group>
 				<Field.Field>
-					<Field.Label for="name">Display Name</Field.Label>
+					<Field.Label for="displayName">Display Name</Field.Label>
 					<Input
-						id="name"
-						name="display_name"
+						id="displayName"
+						name="displayName"
 						type="text"
 						placeholder="John Doe"
 						autocomplete="name"
-						bind:value={form.displayName}
 						required
 					/>
+					{#if $errors.displayName}
+						<Field.Description class="text-destructive">
+							{$errors.displayName[0]}
+						</Field.Description>
+					{/if}
 				</Field.Field>
+
 				<Field.Field>
 					<Field.Label for="email">Email</Field.Label>
 					<Input
@@ -107,13 +88,18 @@
 						type="email"
 						placeholder="m@example.com"
 						autocomplete="email"
-						bind:value={form.email}
 						required
 					/>
 					<Field.Description>
-						We'll use this to contact you. We will not share your email with anyone else.
+						We'll use this to contact you. We will not share your email.
 					</Field.Description>
+					{#if $errors.email}
+						<Field.Description class="text-destructive">
+							{$errors.email[0]}
+						</Field.Description>
+					{/if}
 				</Field.Field>
+
 				<Field.Field>
 					<Field.Label for="password">Password</Field.Label>
 					<Input
@@ -121,46 +107,53 @@
 						name="password"
 						type="password"
 						autocomplete="new-password"
-						bind:value={form.password}
 						required
 					/>
 					<Field.Description>Must be at least 8 characters long.</Field.Description>
+					{#if $errors.password}
+						<Field.Description class="text-destructive">
+							{$errors.password[0]}
+						</Field.Description>
+					{/if}
 				</Field.Field>
+
 				<Field.Field>
-					<Field.Label for="confirm-password">Confirm Password</Field.Label>
+					<Field.Label for="confirmPassword">Confirm Password</Field.Label>
 					<Input
-						id="confirm-password"
-						name="confirm_password"
+						id="confirmPassword"
+						name="confirmPassword"
 						type="password"
 						autocomplete="new-password"
-						bind:value={form.confirmPassword}
 						required
 					/>
-					<Field.Description>Please confirm your password.</Field.Description>
+					{#if $errors.confirmPassword}
+						<Field.Description class="text-destructive">
+							{$errors.confirmPassword[0]}
+						</Field.Description>
+					{/if}
 				</Field.Field>
-				{#if form.error}
-					<Field.Description class="text-destructive" data-invalid="true">
-						{form.error}
-					</Field.Description>
-				{:else if form.success}
-					<Field.Description class="text-emerald-600 dark:text-emerald-400">
-						{form.success}
+
+				{#if $errors.FORM_ERROR}
+					<Field.Description class="text-destructive text-center">
+						{$errors.FORM_ERROR}
 					</Field.Description>
 				{/if}
-				<Field.Group>
-					<Field.Field>
-						<Button type="submit" disabled={form.loading}>
-							{form.loading ? 'Creating account...' : 'Create Account'}
-						</Button>
-						<Button variant="outline" type="button" onclick={handleGoogle}>
-							<Icon icon="ri:google-fill" class="size-5" />
-							Sign up with Google</Button
-						>
-						<Field.Description class="px-6 text-center">
-							Already have an account? <a href="/auth/login">Sign in</a>
-						</Field.Description>
-					</Field.Field>
-				</Field.Group>
+
+				<Field.Field>
+					<Button type="submit" disabled={$isSubmitting}>
+						{$isSubmitting ? 'Creating account...' : 'Create Account'}
+					</Button>
+
+					<Button type="button" variant="outline" onclick={handleGoogle}>
+						<Icon icon="ri:google-fill" class="size-5" />
+						Sign up with Google
+					</Button>
+
+					<Field.Description class="px-6 text-center">
+						Already have an account?
+						<a href="/auth/login">Sign in</a>
+					</Field.Description>
+				</Field.Field>
 			</Field.Group>
 		</form>
 	</Card.Content>

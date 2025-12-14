@@ -1,15 +1,11 @@
-import { apiFetch, type ApiResponse } from './client';
+import type { Team } from '../../types';
+import { apiRequest } from './utils';
 
-type Team = {
-	id: string;
-	name: string;
-	role?: string;
+export type TeamsResponse = {
+  message: string;
+  data: Team[];
 };
 
-export type TeamResponse = ApiResponse<Team>;
-
-export const getTeamById = async (teamId: string) => {
-	const { response, body } = await apiFetch<Team>(`/api/teams/${teamId}`);
-
-	return { response, body };
-};
+export function getTeams(): Promise<TeamsResponse> {
+	return apiRequest<TeamsResponse>("/teams", { defaultError: 'Failed to fetch teams' });
+}

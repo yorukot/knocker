@@ -1,15 +1,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	let {
-		items
-	}: {
-		items: {
-			title: string;
-			url: string;
-			icon?: string;
-		}[];
-	} = $props();
+	import type { NavItem } from './type';
+	let { items }: { items: NavItem[] } = $props();
 </script>
 
 <Sidebar.Group>
