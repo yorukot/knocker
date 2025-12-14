@@ -1,15 +1,16 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
+	import Icon from '@iconify/svelte';
 
-	import { Badge } from "$lib/components/ui/badge/index.js";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card/index.js";
-	import * as Field from "$lib/components/ui/field/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { NativeSelect, NativeSelectOption } from "$lib/components/ui/native-select/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import * as Field from '$lib/components/ui/field/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 
-	import type { MonitorBaseSettings, MonitorKind } from "../../../../types/monitor-create";
+	import type { SuperForm } from 'sveltekit-superforms';
+	import type { MonitorCreate } from '$lib/schemas/monitor';
+	import type { MonitorKind } from '../../../../types/monitor-create';
 
 	type TypeOption = {
 		id: MonitorKind;
@@ -18,68 +19,38 @@
 	};
 
 	let {
-		settings = $bindable<MonitorBaseSettings>({
-			name: "",
-			interval: 60,
-			failure_threshold: 3,
-			recovery_threshold: 1,
-			notification: [],
-		}),
+		form,
 		type,
 		typeOptions = [] as TypeOption[],
-		onTypeChange = (next: MonitorKind) => next,
+		handleTypeChange
 	}: {
-		settings: MonitorBaseSettings;
+		form: SuperForm<MonitorCreate>;
 		type: MonitorKind;
 		typeOptions?: TypeOption[];
-		onTypeChange?: (next: MonitorKind) => void;
+		handleTypeChange: (next: MonitorKind) => void;
 	} = $props();
 
+	const formData = $derived(form.form);
+
 	const intervalPresets = [
-		{ label: "30s", value: 30 },
-		{ label: "1m", value: 60 },
-		{ label: "5m", value: 300 },
+		{ label: '30s', value: 30 },
+		{ label: '1m', value: 60 },
+		{ label: '3m', value: 180 },
+		{ label: '5m', value: 300 },
 	];
 
-	let notificationInput = $state(settings.notification.join(", "));
+	let notificationInput = $state($formData.notification.join(', '));
 
 	$effect(() => {
-		const joined = settings.notification.join(", ");
+		const joined = $formData.notification.join(', ');
 		if (joined !== notificationInput) notificationInput = joined;
 	});
 
 	$effect(() => {
-		settings.notification = notificationInput
-			.split(",")
+		$formData.notification = notificationInput
+			.split(',')
 			.map((id) => id.trim())
 			.filter(Boolean);
-	});
-
-	let intervalInput = $derived(settings.interval.toString());
-	$effect(() => {
-		intervalInput = settings.interval.toString();
-	});
-	$effect(() => {
-		const parsed = Number.parseInt(intervalInput, 10);
-		settings.interval = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-	});
-
-	let failureInput = $derived(settings.failure_threshold.toString());
-	$effect(() => {
-		failureInput = settings.failure_threshold.toString();
-	});
-	$effect(() => {
-		const parsed = Number.parseInt(failureInput, 10);
-		settings.failure_threshold = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-	});
-
-	let recoveryInput = $derived(settings.recovery_threshold.toString());
-	$effect(() => {
-		recoveryInput = settings.recovery_threshold.toString();
-	});
-	$effect(() => {
-		const parsed = Number.parseInt(recoveryInput, 10);
-		settings.recovery_threshold = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 	});
 </script>
 
@@ -97,7 +68,7 @@
 				<Field.Content class="space-y-2">
 					<Input
 						placeholder="API latency (US)"
-						bind:value={settings.name}
+						bind:value={$formData.name}
 						autocomplete="off"
 						required
 					/>
@@ -112,12 +83,12 @@
 						{#each typeOptions as option (option.id)}
 							<button
 								type="button"
-								class={`border-input hover:border-primary/60 hover:shadow-sm text-left transition-colors rounded-lg border p-3 ${
+								class={`cursor-pointer border-input hover:border-primary/60 hover:shadow-sm text-left transition-colors rounded-lg border p-3 ${
 									type === option.id
-										? "border-primary/80 bg-primary/5 ring-2 ring-primary/20"
-										: "bg-card/50"
+										? 'border-primary/80 bg-primary/5 ring-2 ring-primary/20'
+										: 'bg-card/50'
 								}`}
-								onclick={() => onTypeChange(option.id)}
+								onclick={() => handleTypeChange(option.id)}
 								aria-pressed={type === option.id}
 							>
 								<div class="flex items-start gap-2">
@@ -146,7 +117,7 @@
 							min="10"
 							step="5"
 							inputmode="numeric"
-							bind:value={intervalInput}
+							bind:value={$formData.interval}
 							aria-label="Interval in seconds"
 						/>
 						<div class="flex gap-1">
@@ -156,7 +127,7 @@
 									variant="outline"
 									size="sm"
 									class="rounded-full"
-									onclick={() => (intervalInput = preset.value.toString())}
+									onclick={() => ($formData.interval = preset.value)}
 								>
 									{preset.label}
 								</Button>
@@ -173,19 +144,19 @@
 				<Field.Label>Failure &amp; recovery thresholds</Field.Label>
 				<Field.Content class="grid gap-3">
 					<div class="space-y-1.5">
-						<NativeSelect aria-label="Failure threshold" bind:value={failureInput}>
-							<NativeSelectOption value="1">After 1 failure</NativeSelectOption>
-							<NativeSelectOption value="2">After 2 failures</NativeSelectOption>
-							<NativeSelectOption value="3">After 3 failures</NativeSelectOption>
-							<NativeSelectOption value="5">After 5 failures</NativeSelectOption>
+						<NativeSelect aria-label="Failure threshold" bind:value={$formData.failure_threshold}>
+							<NativeSelectOption value={1}>After 1 failure</NativeSelectOption>
+							<NativeSelectOption value={2}>After 2 failures</NativeSelectOption>
+							<NativeSelectOption value={3}>After 3 failures</NativeSelectOption>
+							<NativeSelectOption value={5}>After 5 failures</NativeSelectOption>
 						</NativeSelect>
 						<Field.Description>Consecutive failures before opening an incident.</Field.Description>
 					</div>
 					<div class="space-y-1.5">
-						<NativeSelect aria-label="Recovery threshold" bind:value={recoveryInput}>
-							<NativeSelectOption value="1">After 1 success</NativeSelectOption>
-							<NativeSelectOption value="2">After 2 successes</NativeSelectOption>
-							<NativeSelectOption value="3">After 3 successes</NativeSelectOption>
+						<NativeSelect aria-label="Recovery threshold" bind:value={$formData.recovery_threshold}>
+							<NativeSelectOption value={1}>After 1 success</NativeSelectOption>
+							<NativeSelectOption value={2}>After 2 successes</NativeSelectOption>
+							<NativeSelectOption value={3}>After 3 successes</NativeSelectOption>
 						</NativeSelect>
 						<Field.Description>Consecutive successes to auto-resolve.</Field.Description>
 					</div>
@@ -197,13 +168,10 @@
 			<Field.Field>
 				<Field.Label>Notification channel IDs</Field.Label>
 				<Field.Content class="space-y-2">
-					<Textarea
-						bind:value={notificationInput}
-						rows={2}
-						placeholder="12345, 67890"
-					/>
+					<Textarea bind:value={notificationInput} rows={2} placeholder="12345, 67890" />
 					<Field.Description>
-						Comma-separated IDs matching the backend notification resources. Leave blank to wire later.
+						Comma-separated IDs matching the backend notification resources. Leave blank to wire
+						later.
 					</Field.Description>
 				</Field.Content>
 			</Field.Field>
