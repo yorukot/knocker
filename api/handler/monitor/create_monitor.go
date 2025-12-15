@@ -18,7 +18,7 @@ import (
 type createMonitorRequest struct {
 	Name              string             `json:"name" validate:"required,min=1,max=255"`
 	Type              models.MonitorType `json:"type" validate:"required,oneof=http ping"`
-	Interval          int                `json:"interval" validate:"required,gt=0"`
+	Interval          int                `json:"interval" validate:"required,min=30,max=2592000"`
 	Config            json.RawMessage    `json:"config" validate:"required"`
 	FailureThreshold  int16              `json:"failure_threshold" validate:"required,gt=0"`
 	RecoveryThreshold int16              `json:"recovery_threshold" validate:"required,gt=0"`

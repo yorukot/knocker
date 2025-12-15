@@ -7,9 +7,9 @@
 	import type { NavItem } from './type';
 
 	const NavItems: NavItem[] = [
-		{ title: 'Monitors', url: '/monitors', icon: 'lucide:monitor' },
-		{ title: 'Incidents', url: '/incidents', icon: 'lucide:alert-triangle' },
-		{ title: 'Notifications', url: '/notifications', icon: 'lucide:bell' }
+		{ title: 'Monitors', url: 'monitors', icon: 'lucide:monitor' },
+		{ title: 'Incidents', url: 'incidents', icon: 'lucide:alert-triangle' },
+		{ title: 'Notifications', url: 'notifications', icon: 'lucide:bell' }
 	];
 
 	let { user, teams }: { user: User; teams: Team[]; } =  $props();

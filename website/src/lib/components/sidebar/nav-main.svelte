@@ -2,13 +2,15 @@
 	import Icon from '@iconify/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { NavItem } from './type';
+	import { page } from '$app/state';
 	let { items }: { items: NavItem[] } = $props();
+	const teamID = page.params.teamID;
 </script>
 
 <Sidebar.Group>
 	<Sidebar.Menu>
 		{#each items as item (item.title)}
-			<a href={item.url}>
+			<a href={`/${teamID}/${item.url}`}>
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent={item.title} class="select-none">
 						{#if item.icon}
