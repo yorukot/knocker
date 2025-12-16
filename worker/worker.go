@@ -22,15 +22,18 @@ func Run(db *pgxpool.Pool) {
 		Password: cfg.RedisPassword,
 	}
 
+	queues := map[string]int{
+		// Consume only the regional queue for monitor pings plus default for shared tasks (e.g., notifications).
+		"critical":    1,
+		cfg.AppRegion: 6,
+		"default":     3,
+	}
+
 	srv := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
 			Concurrency: 10000,
-			Queues: map[string]int{
-				"critical": 6,
-				"default":  3,
-				"low":      1,
-			},
+			Queues:      queues,
 		},
 	)
 

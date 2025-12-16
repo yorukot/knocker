@@ -13,8 +13,8 @@ func calculateJitter(intervalSeconds int) time.Duration {
 
 	// Cap at 20 seconds if 30% exceeds 20s
 	maxJitterSeconds := thirtyPercent
-	if thirtyPercent >= 20.0 {
-		maxJitterSeconds = 20.0
+	if thirtyPercent >= 5.0 {
+		maxJitterSeconds = 5.0
 	}
 
 	// Generate random jitter between 0 and maxJitterSeconds

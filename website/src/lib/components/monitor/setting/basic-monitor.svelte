@@ -2,6 +2,9 @@
 	import { createForm } from 'felte';
 	import { validator } from '@felte/validator-zod';
 	import { z } from 'zod';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { get } from 'svelte/store';
 
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -16,6 +19,8 @@
 	import HttpMonitor from './http-monitor.svelte';
 	import PingMonitor from './ping-monitor.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { createMonitor } from '$lib/api/monitor';
+	import { normalizeStatusCodes, parseHeaders } from './utils';
 	import {
 		intervalOptions,
 		monitorTypeSelectData,
@@ -120,13 +125,77 @@
 		config: defaultHttpConfig()
 	};
 
-	const { form, errors, setFields } = createForm<MonitorFormValues>({
+	const { form, errors, setFields, isSubmitting } = createForm<MonitorFormValues>({
 		initialValues,
 		extend: validator({ schema: monitorFormSchema }),
 		onSubmit: async (values) => {
-			// TODO: wire to API
-			console.log('submit monitor payload', values);
+			try {
+				const payload = buildPayload(values);
+				console.log('monitor:create:payload', payload);
+				const { params } = get(page);
+				const teamID = params?.teamID;
+				if (!teamID) {
+					console.error('monitor:create missing teamID in route params', params);
+					return { FORM_ERROR: 'Missing team id in route.' };
+				}
+				const response = await createMonitor(teamID, payload);
+				console.log('monitor:create:success', response);
+				await goto(`/${teamID}/monitors`);
+			} catch (error) {
+				console.error('monitor:create:error', error);
+				const message =
+					error instanceof Error ? error.message : 'Failed to create monitor. Please try again.';
+				return { FORM_ERROR: message };
+			}
 		}
+	});
+
+	function buildPayload(values: MonitorFormValues) {
+		const base = {
+			name: values.name,
+			type: values.type,
+			interval: values.interval,
+			failure_threshold: values.failureThreshold,
+			recovery_threshold: values.recoveryThreshold,
+			notification: values.notification
+		};
+
+		if (values.type === 'http') {
+			const headers = parseHeaders(values.config.headers);
+			return {
+				...base,
+				config: {
+					url: values.config.url,
+					method: values.config.method,
+					max_redirects: values.config.maxRedirects,
+					request_timeout: values.config.requestTimeoutSeconds,
+					headers,
+					body_encoding: values.config.bodyEncoding || undefined,
+					body: values.config.body || undefined,
+					upside_down_mode: values.config.upsideDownMode,
+					certificate_expiry_notification: values.config.certificateExpiryNotification,
+					ignore_tls_error: values.config.ignoreTlsError,
+					accepted_status_codes: normalizeStatusCodes(values.config.acceptedStatusCodes)
+				}
+			};
+		}
+
+		// ping
+		return {
+			...base,
+			config: {
+				host: values.config.host,
+				timeout_seconds: values.config.timeoutSeconds,
+				...(values.config.packetSize === '' ? {} : { packet_size: Number(values.config.packetSize) })
+			}
+		};
+	}
+
+	let formLevelError = $state<string | null>(null);
+
+	$effect(() => {
+		const keyed = $errors as unknown as { FORM_ERROR?: string[] | null };
+		formLevelError = keyed.FORM_ERROR?.[0] ?? null;
 	});
 
 	$effect(() => {
@@ -328,9 +397,17 @@
 	<PingMonitor errors={$errors} />
 {/if}
 
+{#if formLevelError}
+	<Field.Description class="text-destructive text-right">
+		{formLevelError}
+	</Field.Description>
+{/if}
+
 <div class="flex gap-2 justify-end">
-	<Button size="default" variant="secondary">Cancel</Button>
-	<Button size="default" variant="default">Create</Button>
+	<Button type="button" size="default" variant="secondary">Cancel</Button>
+	<Button type="submit" size="default" variant="default" disabled={$isSubmitting}>
+		{$isSubmitting ? 'Creating…' : 'Create'}
+	</Button>
 </div>
 
 </form>

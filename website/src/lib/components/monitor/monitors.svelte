@@ -5,8 +5,44 @@
 	import Icon from '@iconify/svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import { monitorTarget } from './utils';
+	import { deleteMonitor } from '$lib/api/monitor';
+	import { toast } from 'svelte-sonner';
+	import { page } from '$app/state';
+	import DeleteMonitorDialog from './delete-monitor-dialog.svelte';
 
 	let { monitors }: { monitors: Monitor[] } = $props();
+
+	let confirmOpen = $state(false);
+	let deleting = $state(false);
+	let targetMonitor: Monitor | null = $state(null);
+
+	function askDelete(monitor: Monitor) {
+		targetMonitor = monitor;
+		confirmOpen = true;
+	}
+
+	async function handleDelete() {
+		if (!targetMonitor) return;
+		const teamID = page.params.teamID;
+		if (!teamID) {
+			toast.error('Missing team id');
+			return;
+		}
+
+		deleting = true;
+		try {
+			await deleteMonitor(teamID, targetMonitor.id);
+			monitors = monitors.filter((m) => m.id !== targetMonitor?.id);
+			toast.success('Monitor deleted');
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to delete monitor';
+			toast.error(message);
+		} finally {
+			deleting = false;
+			confirmOpen = false;
+			targetMonitor = null;
+		}
+	}
 </script>
 
 <div>
@@ -46,7 +82,10 @@
 									<Icon icon="lucide:edit" /> Edit
 								</DropdownMenu.Item>
 								<DropdownMenu.Separator />
-								<DropdownMenu.Item variant="destructive">
+								<DropdownMenu.Item
+									variant="destructive"
+									onclick={() => askDelete(monitor)}
+								>
 									<Icon icon="lucide:trash" />
 									Delete
 								</DropdownMenu.Item>
@@ -57,4 +96,11 @@
 			</Card>
 		{/each}
 	</div>
+
+	<DeleteMonitorDialog
+		bind:open={confirmOpen}
+		monitor={targetMonitor}
+		onConfirm={handleDelete}
+		loading={deleting}
+	/>
 </div>

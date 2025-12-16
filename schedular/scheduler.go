@@ -143,7 +143,12 @@ func scheduleMonitors(monitors []models.Monitor, asynqClient *asynq.Client) {
 			}
 
 			// Enqueue the task
-			info, err := asynqClient.Enqueue(task)
+			info, err := asynqClient.Enqueue(
+				task,
+				asynq.Timeout(10*time.Second),
+				// Route each region's task to its own queue so only the matching regional worker consumes it.
+				asynq.Queue(region),
+			)
 			if err != nil {
 				zap.L().Error("Failed to enqueue monitor task",
 					zap.Int64("monitor_id", monitor.ID),
