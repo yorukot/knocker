@@ -6,23 +6,54 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { ModeWatcher } from 'mode-watcher';
-	import type { SidebarData } from './proxy+layout';
-	import type { Snippet } from 'svelte';
+	import { page } from '$app/state';
+	import type { Page } from '@sveltejs/kit';
+	import type { SidebarData } from './+layout';
 
 	type Crumb = {
 		label: string;
 		href: string;
 	};
 
-	let {
-		children,
-		data
-	}: {
-		children: Snippet;
-		data: SidebarData;
-	} = $props();
+	/** @type {import('./$types').PageProps} */
+	let { children, data } = $props();
 
-	const crumbs: Crumb[] = [];
+	const crumbs: Crumb[] = $derived(buildBreadcrumbs(page, data));
+
+	function buildBreadcrumbs(currentPage: Page, layoutData: SidebarData): Crumb[] {
+		const segments = currentPage.url.pathname.split('/').filter(Boolean);
+
+		if (!segments.length) return [];
+
+		const [teamId, ...rest] = segments;
+		const teamName = layoutData?.teams?.find((team) => team.id === teamId)?.name ?? 'Team';
+		let href = `/${teamId}`;
+
+		const trail: Crumb[] = [
+			{
+				label: teamName,
+				href
+			}
+		];
+
+		for (const segment of rest) {
+			href = `${href}/${segment}`;
+			trail.push({
+				label: formatSegment(segment),
+				href
+			});
+		}
+
+		return trail;
+	}
+
+	function formatSegment(segment: string): string {
+		return segment
+			.split('-')
+			.filter(Boolean)
+			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+			.join(' ');
+	}
 </script>
 
 <svelte:head>
@@ -60,8 +91,10 @@
 				{/if}
 			</div>
 		</header>
-		<main class="flex flex-1 flex-col gap-4 p-4 pt-0">
-			{@render children()}
+		<main class="flex flex-1 flex-col gap-4 p-4 pt-0 w-full">
+			<div class="max-w-5xl mx-auto w-full">
+				{@render children()}
+			</div>
 		</main>
 	</Sidebar.Inset>
 </Sidebar.Provider>

@@ -5,46 +5,18 @@
 	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
-	import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
+	import MultiSelect from '$lib/components/ui/multi-select';
 	import * as Accordion from '$lib/components/ui/accordion';
 
 	import type { BodyEncoding, HTTPMethod } from '../../../../types/monitor-config';
+	import {
+		bodyEncodingOptions,
+		acceptedStatusOptions,
+		httpMethods
+	} from './setting';
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const { errors = {} } = $props<{ errors?: any }>();
-
-	const methodOptions: HTTPMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
-
-	const bodyEncodingOptions: Array<{ label: string; value: BodyEncoding | '' }> = [
-		{ label: 'None', value: '' },
-		{ label: 'JSON', value: 'json' },
-		{ label: 'XML', value: 'xml' }
-	];
-
-	const statusRangeOptions: MultiSelectOption[] = [
-		{ label: 'Any 2xx', value: '2xx', keywords: ['2xx', 'success'] },
-		{ label: 'Any 3xx', value: '3xx', keywords: ['3xx', 'redirect'] },
-		{ label: 'Any 4xx', value: '4xx', keywords: ['4xx', 'client'] },
-		{ label: 'Any 5xx', value: '5xx', keywords: ['5xx', 'server'] }
-	];
-
-	const commonStatusOptions: MultiSelectOption[] = [
-		{ label: '200 OK', value: '200' },
-		{ label: '201 Created', value: '201' },
-		{ label: '202 Accepted', value: '202' },
-		{ label: '204 No Content', value: '204' },
-		{ label: '301 Moved Permanently', value: '301' },
-		{ label: '302 Found', value: '302' },
-		{ label: '400 Bad Request', value: '400' },
-		{ label: '401 Unauthorized', value: '401' },
-		{ label: '403 Forbidden', value: '403' },
-		{ label: '404 Not Found', value: '404' },
-		{ label: '429 Too Many Requests', value: '429' },
-		{ label: '500 Internal Server Error', value: '500' },
-		{ label: '502 Bad Gateway', value: '502' },
-		{ label: '503 Service Unavailable', value: '503' }
-	];
-
-	const acceptedStatusOptions: MultiSelectOption[] = [...statusRangeOptions, ...commonStatusOptions];
 
 	let url = $state('');
 	let method = $state<HTTPMethod>('GET');
@@ -114,7 +86,7 @@
 								</Select.Trigger>
 								<Select.Content>
 									<Select.Group>
-										{#each methodOptions as opt (opt)}
+										{#each httpMethods as opt (opt)}
 											<Select.Item value={opt}>{opt}</Select.Item>
 										{/each}
 									</Select.Group>

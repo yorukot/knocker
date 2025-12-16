@@ -8,68 +8,23 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
-	import type { MonitorType, Notification, NotificationType } from '../../../../types';
+	import type { MonitorType } from '../../../../types';
+	import type { Notification } from '../../../../types';
 	import { Slider } from '$lib/components/ui/slider';
 	import { decidedNotificationIcon } from '../utils';
 	import * as Select from '$lib/components/ui/select';
 	import HttpMonitor from './http-monitor.svelte';
 	import PingMonitor from './ping-monitor.svelte';
 	import { Button } from '$lib/components/ui/button';
-
-	type MonitorTypeSelect = {
-		title: string;
-		description: string;
-		value: MonitorType;
-	};
-
-	const monitorTypeSelectData: readonly MonitorTypeSelect[] = [
-		{
-			title: 'HTTP',
-			description: 'Monitor an HTTP or HTTPS endpoint and check response status and latency.',
-			value: 'http'
-		},
-		{
-			title: 'Ping',
-			description: 'Monitor a host using ICMP ping to check network availability and latency.',
-			value: 'ping'
-		}
-	];
-
-	type IntervalOption = {
-		label: string;
-		seconds: number;
-	};
-
-	const intervalOptions: readonly IntervalOption[] = [
-		{ label: '30s', seconds: 30 },
-		{ label: '45s', seconds: 45 },
-		{ label: '1m', seconds: 60 },
-		{ label: '3m', seconds: 180 },
-		{ label: '5m', seconds: 300 },
-		{ label: '10m', seconds: 600 },
-		{ label: '15m', seconds: 900 },
-		{ label: '30m', seconds: 1800 },
-		{ label: '1h', seconds: 3600 },
-		{ label: '2h', seconds: 7200 }
-	];
-
-	type ThresholdOption = {
-		label: string;
-		value: number;
-	};
-
-	const thresholdOptions: readonly ThresholdOption[] = [
-		{ label: 'Immediate (after 1 check)', value: 1 },
-		{ label: 'After 2 checks', value: 2 },
-		{ label: 'After 3 checks', value: 3 },
-		{ label: 'After 4 checks', value: 4 },
-		{ label: 'After 5 checks', value: 5 }
-	];
-
-	const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'] as const;
+	import {
+		intervalOptions,
+		monitorTypeSelectData,
+		thresholdOptions,
+		httpMethods
+	} from './setting';
 
 	const httpConfigSchema = z.object({
-		url: z.string().url('Must be a valid URL'),
+		url: z.url('Must be a valid URL'),
 		method: z.enum(httpMethods),
 		maxRedirects: z.coerce.number().int().min(0).max(1000),
 		requestTimeoutSeconds: z.coerce.number().int().min(0).max(120),
@@ -111,7 +66,11 @@
 		})
 	]);
 
-	const defaultHttpConfig = () => ({
+	type HttpConfig = z.infer<typeof httpConfigSchema>;
+	type PingConfig = z.infer<typeof pingConfigSchema>;
+	type MonitorFormValues = z.infer<typeof monitorFormSchema>;
+
+	const defaultHttpConfig = (): HttpConfig => ({
 		url: '',
 		method: 'GET' as const,
 		maxRedirects: 5,
@@ -125,7 +84,7 @@
 		ignoreTlsError: false
 	});
 
-	const defaultPingConfig = () => ({
+	const defaultPingConfig = (): PingConfig => ({
 		host: '',
 		timeoutSeconds: 5,
 		packetSize: ''
@@ -135,59 +94,25 @@
 	const initialFailureThreshold = '1';
 	const initialRecoveryThreshold = '1';
 
+	let { notifications }: { notifications: Notification[] } = $props();
 	let selectedMonitorType = $state<MonitorType>('http');
 	let intervalIndex = $state<number>(initialIntervalIndex);
 	let failureThresholdValue = $state<string>(initialFailureThreshold);
 	let recoveryThresholdValue = $state<string>(initialRecoveryThreshold);
 	let selectedNotificationIds = $state<string[]>([]);
 
-	const notifications: Notification[] = [
-		{
-			id: 'notif_001',
-			teamId: 'team_001',
-			type: 'discord' as NotificationType,
-			name: 'CI Failure Alert',
-			config: {
-				webhookUrl: 'https://discord.com/api/webhooks/mock/webhook-1'
-			},
-			createdAt: '2025-01-01T08:00:00.000Z',
-			updatedAt: '2025-01-01T08:00:00.000Z'
-		},
-		{
-			id: 'notif_002',
-			teamId: 'team_001',
-			type: 'telegram' as NotificationType,
-			name: 'Deploy Success Notification',
-			config: {
-				botToken: '123456:mock-telegram-bot-token',
-				chatId: '-1001234567890'
-			},
-			createdAt: '2025-01-02T09:30:00.000Z',
-			updatedAt: '2025-01-03T10:15:00.000Z'
-		},
-		{
-			id: 'notif_003',
-			teamId: 'team_002',
-			type: 'discord' as NotificationType,
-			name: 'Security Alert',
-			config: {
-				webhookUrl: 'https://discord.com/api/webhooks/mock/webhook-2'
-			},
-			createdAt: '2025-01-04T12:00:00.000Z',
-			updatedAt: '2025-01-05T18:45:00.000Z'
-		}
-	];
+	const notificationOptions: MultiSelectOption[] = $derived.by(() =>
+		notifications.map((notification) => ({
+			label: notification.name,
+			value: notification.id,
+			keywords: [notification.type, notification.name],
+			icon: decidedNotificationIcon(notification)
+		}))
+	);
 
-	const notificationOptions: MultiSelectOption[] = notifications.map((notification) => ({
-		label: notification.name,
-		value: notification.id,
-		keywords: [notification.type, notification.name],
-		icon: decidedNotificationIcon(notification)
-	}));
-
-	const initialValues = {
+	const initialValues: MonitorFormValues = {
 		name: '',
-		type: 'http' as MonitorType,
+		type: 'http',
 		interval: intervalOptions[initialIntervalIndex].seconds,
 		failureThreshold: Number(initialFailureThreshold),
 		recoveryThreshold: Number(initialRecoveryThreshold),
@@ -195,7 +120,7 @@
 		config: defaultHttpConfig()
 	};
 
-	const { form, errors, data, isSubmitting, setFields } = createForm({
+	const { form, errors, setFields } = createForm<MonitorFormValues>({
 		initialValues,
 		extend: validator({ schema: monitorFormSchema }),
 		onSubmit: async (values) => {
@@ -223,7 +148,9 @@
 	function handleTypeChange(next: MonitorType) {
 		selectedMonitorType = next;
 		setFields('type', next);
-		setFields('config', next === 'http' ? defaultHttpConfig() : defaultPingConfig());
+		const configValue: MonitorFormValues['config'] =
+			next === 'http' ? defaultHttpConfig() : defaultPingConfig();
+		setFields('config', configValue);
 	}
 
 	const failureThresholdLabel = $derived.by(() => {
@@ -272,7 +199,7 @@
 					<Field.Description>Select the type of monitor you want to create.</Field.Description>
 					<RadioGroup.Root
 						bind:value={selectedMonitorType}
-						onValueChange={(value: MonitorType) => handleTypeChange(value)}
+						onValueChange={(value: string) => handleTypeChange(value as MonitorType)}
 						class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]"
 					>
 						{#each monitorTypeSelectData as option (option.value)}
@@ -391,12 +318,6 @@
 						</Field.Description>
 					{/if}
 				</div>
-
-				{#if $errors.FORM_ERROR}
-					<Field.Description class="text-destructive text-center">
-						{$errors.FORM_ERROR}
-					</Field.Description>
-				{/if}
 			</Field.Set>
 	</Card.Content>
 </Card.Root>
@@ -413,4 +334,3 @@
 </div>
 
 </form>
-

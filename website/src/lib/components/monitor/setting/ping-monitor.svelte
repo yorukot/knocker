@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const { errors = {} } = $props<{ errors?: any }>();
 
 	let host = $state('');
