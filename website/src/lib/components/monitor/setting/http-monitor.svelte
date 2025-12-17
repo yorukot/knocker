@@ -6,29 +6,60 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
 	import MultiSelect from '$lib/components/ui/multi-select';
-	import * as Accordion from '$lib/components/ui/accordion';
+import * as Accordion from '$lib/components/ui/accordion';
 
 	import type { BodyEncoding, HTTPMethod } from '../../../../types/monitor-config';
 	import {
 		bodyEncodingOptions,
 		acceptedStatusOptions,
-		httpMethods
+		httpMethods,
+		successStatusCodes
 	} from './setting';
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const { errors = {} } = $props<{ errors?: any }>();
+	const {
+		errors = {},
+		initialConfig,
+		acceptedStatusCodes: acceptedStatusCodesProp,
+		onAcceptedStatusChange = () => {}
+	} = $props<{
+		errors?: any;
+		initialConfig?: {
+			url: string;
+			method: HTTPMethod;
+			maxRedirects: number;
+			requestTimeoutSeconds: number;
+			headers?: string;
+			bodyEncoding?: BodyEncoding | '';
+			body?: string;
+			acceptedStatusCodes?: string[];
+			upsideDownMode: boolean;
+			ignoreTlsError: boolean;
+			certificateExpiryNotification: boolean;
+		};
+		acceptedStatusCodes?: string[];
+		onAcceptedStatusChange?: (codes: string[]) => void;
+	}>();
 
-	let url = $state('');
-	let method = $state<HTTPMethod>('GET');
-	let requestTimeoutSeconds = $state<number | ''>(10);
-	let maxRedirects = $state<number | ''>(5);
-	let headers = $state('');
-	let bodyEncoding = $state<BodyEncoding | ''>('');
-	let body = $state('');
-	let acceptedStatusCodes = $state<string[]>(['2xx']);
-	let upsideDownMode = $state(false);
-	let ignoreTlsError = $state(false);
-	let certificateExpiryNotification = $state(true);
+	let url = $state(initialConfig?.url ?? '');
+	let method = $state<HTTPMethod>(initialConfig?.method ?? 'GET');
+	let requestTimeoutSeconds = $state<number | ''>(initialConfig?.requestTimeoutSeconds ?? 10);
+	let maxRedirects = $state<number | ''>(initialConfig?.maxRedirects ?? 5);
+	let headers = $state(initialConfig?.headers ?? '');
+	let bodyEncoding = $state<BodyEncoding | ''>(initialConfig?.bodyEncoding ?? '');
+	let body = $state(initialConfig?.body ?? '');
+	let acceptedStatusCodes = $state<string[]>(
+		acceptedStatusCodesProp ?? initialConfig?.acceptedStatusCodes ?? ['2xx']
+	);
+	let upsideDownMode = $state(initialConfig?.upsideDownMode ?? false);
+	let ignoreTlsError = $state(initialConfig?.ignoreTlsError ?? false);
+	let certificateExpiryNotification = $state(
+		initialConfig?.certificateExpiryNotification ?? true
+	);
+
+	$effect(() => {
+		onAcceptedStatusChange(acceptedStatusCodes);
+	});
 
 	const timeoutHelper = $derived.by(() =>
 		requestTimeoutSeconds === ''
@@ -44,6 +75,50 @@
 
 	const acceptedStatusHelper =
 		'Choose specific codes or broad ranges (2xx/4xx/5xx). Leave empty to accept any 2xx.';
+
+	const statusOptionOrder = new Map(
+		acceptedStatusOptions.map((option, index) => [option.value, index])
+	);
+
+	function sortStatusSelections(values: string[]): string[] {
+		return values
+			.slice()
+			.sort(
+				(a, b) =>
+					(statusOptionOrder.get(a) ?? Number.POSITIVE_INFINITY) -
+					(statusOptionOrder.get(b) ?? Number.POSITIVE_INFINITY)
+			);
+	}
+
+	function selectionsEqual(a: string[], b: string[]): boolean {
+		return a.length === b.length && a.every((value, idx) => value === b[idx]);
+	}
+
+	$effect(() => {
+		const current = acceptedStatusCodes ?? [];
+		const hasRange = current.includes('2xx');
+		const hasAllSuccessCodes = successStatusCodes.every((code) => current.includes(code));
+
+		if (hasRange) {
+			const cleaned = sortStatusSelections(
+				current.filter((code) => code === '2xx' || !successStatusCodes.includes(code))
+			);
+			if (!selectionsEqual(cleaned, current)) {
+				acceptedStatusCodes = cleaned;
+			}
+			return;
+		}
+
+		if (hasAllSuccessCodes) {
+			const next = sortStatusSelections([
+				...current.filter((code) => !successStatusCodes.includes(code)),
+				'2xx'
+			]);
+			if (!selectionsEqual(next, current)) {
+				acceptedStatusCodes = next;
+			}
+		}
+	});
 </script>
 
 <Card.Root class="mx-auto w-full">

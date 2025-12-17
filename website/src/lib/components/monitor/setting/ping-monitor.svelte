@@ -2,14 +2,17 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Accordion from '$lib/components/ui/accordion';
+import * as Accordion from '$lib/components/ui/accordion';
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const { errors = {} } = $props<{ errors?: any }>();
+	const { errors = {}, initialConfig } = $props<{
+		errors?: any;
+		initialConfig?: { host?: string; timeoutSeconds?: number; packetSize?: number | '' };
+	}>();
 
-	let host = $state('');
-	let timeoutSeconds = $state<number | ''>(5);
-	let packetSize = $state<number | ''>('');
+	let host = $state(initialConfig?.host ?? '');
+	let timeoutSeconds = $state<number | ''>(initialConfig?.timeoutSeconds ?? 5);
+	let packetSize = $state<number | ''>(initialConfig?.packetSize ?? '');
 
 	const timeoutHelper = $derived.by(() =>
 		timeoutSeconds === '' ? 'Default 5s timeout per ping.' : `${timeoutSeconds}s timeout per ping.`

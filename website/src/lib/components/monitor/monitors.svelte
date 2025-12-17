@@ -9,6 +9,8 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import DeleteMonitorDialog from './delete-monitor-dialog.svelte';
+	import { goto } from '$app/navigation';
+	import Button from '../ui/button/button.svelte';
 
 	let { monitors }: { monitors: Monitor[] } = $props();
 
@@ -71,21 +73,20 @@
 
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger class="shrink-0">
-							<Icon icon="lucide:more-vertical" />
+							<Button variant="ghost" size="icon">
+								<Icon icon="lucide:more-vertical" />
+							</Button>
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content>
 							<DropdownMenu.Group>
 								<DropdownMenu.Item>
 									<Icon icon="lucide:eye" /> View details
 								</DropdownMenu.Item>
-								<DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => goto(`monitors/${monitor.id}/edit`)}>
 									<Icon icon="lucide:edit" /> Edit
 								</DropdownMenu.Item>
 								<DropdownMenu.Separator />
-								<DropdownMenu.Item
-									variant="destructive"
-									onclick={() => askDelete(monitor)}
-								>
+								<DropdownMenu.Item variant="destructive" onclick={() => askDelete(monitor)}>
 									<Icon icon="lucide:trash" />
 									Delete
 								</DropdownMenu.Item>

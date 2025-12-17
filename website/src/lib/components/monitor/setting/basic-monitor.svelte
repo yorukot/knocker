@@ -10,16 +10,16 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
-	import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
-	import type { MonitorType } from '../../../../types';
-	import type { Notification } from '../../../../types';
+import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
+import type { Monitor, MonitorType } from '../../../../types';
+import type { Notification } from '../../../../types';
 	import { Slider } from '$lib/components/ui/slider';
 	import { decidedNotificationIcon } from '../utils';
 	import * as Select from '$lib/components/ui/select';
 	import HttpMonitor from './http-monitor.svelte';
 	import PingMonitor from './ping-monitor.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { createMonitor } from '$lib/api/monitor';
+import { Button } from '$lib/components/ui/button';
+import { createMonitor, updateMonitor } from '$lib/api/monitor';
 	import { normalizeStatusCodes, parseHeaders } from './utils';
 	import {
 		intervalOptions,
@@ -99,12 +99,23 @@
 	const initialFailureThreshold = '1';
 	const initialRecoveryThreshold = '1';
 
-	let { notifications }: { notifications: Notification[] } = $props();
-	let selectedMonitorType = $state<MonitorType>('http');
-	let intervalIndex = $state<number>(initialIntervalIndex);
-	let failureThresholdValue = $state<string>(initialFailureThreshold);
-	let recoveryThresholdValue = $state<string>(initialRecoveryThreshold);
-	let selectedNotificationIds = $state<string[]>([]);
+	let { notifications, monitor = null }: { notifications: Notification[]; monitor?: Monitor | null } =
+		$props();
+
+	const isEdit = monitor !== null;
+
+	let selectedMonitorType = $state<MonitorType>(monitor?.type ?? 'http');
+	const foundIntervalIndex = intervalOptions.findIndex((opt) => opt.seconds === (monitor?.interval ?? -1));
+	let intervalIndex = $state<number>(
+		foundIntervalIndex !== -1 ? foundIntervalIndex : initialIntervalIndex
+	);
+	let failureThresholdValue = $state<string>(
+		(monitor?.failureThreshold ?? Number(initialFailureThreshold)).toString()
+	);
+	let recoveryThresholdValue = $state<string>(
+		(monitor?.recoveryThreshold ?? Number(initialRecoveryThreshold)).toString()
+	);
+	let selectedNotificationIds = $state<string[]>(monitor?.notification ?? []);
 
 	const notificationOptions: MultiSelectOption[] = $derived.by(() =>
 		notifications.map((notification) => ({
@@ -115,15 +126,98 @@
 		}))
 	);
 
-	const initialValues: MonitorFormValues = {
-		name: '',
-		type: 'http',
-		interval: intervalOptions[initialIntervalIndex].seconds,
-		failureThreshold: Number(initialFailureThreshold),
-		recoveryThreshold: Number(initialRecoveryThreshold),
-		notification: [] as string[],
-		config: defaultHttpConfig()
-	};
+	function toHeaderString(headers?: Record<string, string>): string {
+		if (!headers) return '';
+		return Object.entries(headers)
+			.map(([key, value]) => `${key}: ${value}`)
+			.join('\n');
+	}
+
+	function initialHttpFromMonitor(config: Record<string, unknown> | undefined): HttpConfig {
+		return {
+			url: (config?.url as string) ?? '',
+			method: ((config?.method as HttpConfig['method']) ?? 'GET') as HttpConfig['method'],
+			maxRedirects:
+				(config?.max_redirects as number) ??
+				(config?.maxRedirects as number) ??
+				defaultHttpConfig().maxRedirects,
+			requestTimeoutSeconds:
+				(config?.request_timeout as number) ??
+				(config?.requestTimeout as number) ??
+				defaultHttpConfig().requestTimeoutSeconds,
+			headers: toHeaderString(config?.headers as Record<string, string> | undefined),
+			bodyEncoding:
+				(config?.body_encoding as HttpConfig['bodyEncoding']) ??
+				(config?.bodyEncoding as HttpConfig['bodyEncoding']) ??
+				'',
+			body: (config?.body as string) ?? '',
+			acceptedStatusCodes:
+				(config?.accepted_status_codes as number[] | undefined)?.map(String) ??
+				(config?.acceptedStatusCodes as number[] | undefined)?.map(String) ??
+				defaultHttpConfig().acceptedStatusCodes,
+			upsideDownMode:
+				(config?.upside_down_mode as boolean) ??
+				(config?.upsideDownMode as boolean) ??
+				defaultHttpConfig().upsideDownMode,
+			certificateExpiryNotification:
+				(config?.certificate_expiry_notification as boolean) ??
+				(config?.certificateExpiryNotification as boolean) ??
+				defaultHttpConfig().certificateExpiryNotification,
+			ignoreTlsError:
+				(config?.ignore_tls_error as boolean) ??
+				(config?.ignoreTlsError as boolean) ??
+				defaultHttpConfig().ignoreTlsError
+		};
+	}
+
+	function initialPingFromMonitor(config: Record<string, unknown> | undefined): PingConfig {
+		return {
+			host: (config?.host as string) ?? '',
+			timeoutSeconds:
+				(config?.timeout_seconds as number) ??
+				(config?.timeoutSeconds as number) ??
+				defaultPingConfig().timeoutSeconds,
+			packetSize:
+				(config?.packet_size as number) ??
+				(config?.packetSize as number) ??
+				(defaultPingConfig().packetSize ?? '')
+		};
+	}
+
+	const initialValues: MonitorFormValues = (() => {
+		if (!monitor) {
+			return {
+				name: '',
+				type: 'http',
+				interval: intervalOptions[initialIntervalIndex].seconds,
+				failureThreshold: Number(initialFailureThreshold),
+				recoveryThreshold: Number(initialRecoveryThreshold),
+				notification: [] as string[],
+				config: defaultHttpConfig()
+			};
+		}
+
+		const base = {
+			name: monitor.name,
+			type: monitor.type,
+			interval: monitor.interval,
+			failureThreshold: monitor.failureThreshold,
+			recoveryThreshold: monitor.recoveryThreshold,
+			notification: monitor.notification
+		};
+
+		if (monitor.type === 'http') {
+			return {
+				...base,
+				config: initialHttpFromMonitor(monitor.config as Record<string, unknown>)
+			};
+		}
+
+		return {
+			...base,
+			config: initialPingFromMonitor(monitor.config as Record<string, unknown>)
+		};
+	})();
 
 	const { form, errors, setFields, isSubmitting } = createForm<MonitorFormValues>({
 		initialValues,
@@ -138,13 +232,17 @@
 					console.error('monitor:create missing teamID in route params', params);
 					return { FORM_ERROR: 'Missing team id in route.' };
 				}
-				const response = await createMonitor(teamID, payload);
-				console.log('monitor:create:success', response);
+				const response = isEdit
+					? await updateMonitor(teamID, monitor!.id, payload)
+					: await createMonitor(teamID, payload);
+				console.log('monitor:save:success', response);
 				await goto(`/${teamID}/monitors`);
 			} catch (error) {
-				console.error('monitor:create:error', error);
+				console.error('monitor:save:error', error);
 				const message =
-					error instanceof Error ? error.message : 'Failed to create monitor. Please try again.';
+					error instanceof Error
+						? error.message
+						: 'Failed to save monitor. Please try again.';
 				return { FORM_ERROR: message };
 			}
 		}
@@ -214,12 +312,21 @@
 		setFields('notification', selectedNotificationIds);
 	});
 
+	$effect(() => {
+		if (selectedMonitorType === 'http') {
+			setFields('config.acceptedStatusCodes', httpAcceptedStatusCodes);
+		}
+	});
+
 	function handleTypeChange(next: MonitorType) {
 		selectedMonitorType = next;
 		setFields('type', next);
 		const configValue: MonitorFormValues['config'] =
 			next === 'http' ? defaultHttpConfig() : defaultPingConfig();
 		setFields('config', configValue);
+		if (next === 'http') {
+			httpAcceptedStatusCodes = defaultHttpConfig().acceptedStatusCodes;
+		}
 	}
 
 	const failureThresholdLabel = $derived.by(() => {
@@ -245,6 +352,15 @@
 		if (recoveryThresholdValue === '1') return 'After a single successful check.';
 		return `After ${recoveryThresholdValue} consecutive successful checks.`;
 	});
+
+	const initialHttpConfig =
+		monitor?.type === 'http' ? (initialValues.config as HttpConfig) : undefined;
+	const initialPingConfig =
+		monitor?.type === 'ping' ? (initialValues.config as PingConfig) : undefined;
+
+	let httpAcceptedStatusCodes = $state<string[]>(
+		initialHttpConfig?.acceptedStatusCodes ?? ['2xx']
+	);
 </script>
 
 <form use:form class="space-y-4 w-full">
@@ -392,9 +508,16 @@
 </Card.Root>
 
 {#if selectedMonitorType === 'http'}
-	<HttpMonitor errors={$errors} />
+	<HttpMonitor
+		errors={$errors}
+		initialConfig={initialHttpConfig}
+		acceptedStatusCodes={httpAcceptedStatusCodes}
+		onAcceptedStatusChange={(codes) => {
+			httpAcceptedStatusCodes = codes;
+		}}
+	/>
 {:else}
-	<PingMonitor errors={$errors} />
+	<PingMonitor errors={$errors} initialConfig={initialPingConfig} />
 {/if}
 
 {#if formLevelError}
@@ -404,9 +527,8 @@
 {/if}
 
 <div class="flex gap-2 justify-end">
-	<Button type="button" size="default" variant="secondary">Cancel</Button>
 	<Button type="submit" size="default" variant="default" disabled={$isSubmitting}>
-		{$isSubmitting ? 'Creating…' : 'Create'}
+		{$isSubmitting ? (isEdit ? 'Saving…' : 'Creating…') : isEdit ? 'Save changes' : 'Create'}
 	</Button>
 </div>
 

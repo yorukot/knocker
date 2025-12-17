@@ -69,27 +69,92 @@ export const bodyEncodingOptions: Array<{ label: string; value: BodyEncoding | '
 ];
 
 const statusRangeOptions: MultiSelectOption[] = [
+	{ label: 'Any 1xx', value: '1xx', keywords: ['1xx', 'informational'] },
 	{ label: 'Any 2xx', value: '2xx', keywords: ['2xx', 'success'] },
 	{ label: 'Any 3xx', value: '3xx', keywords: ['3xx', 'redirect'] },
 	{ label: 'Any 4xx', value: '4xx', keywords: ['4xx', 'client'] },
 	{ label: 'Any 5xx', value: '5xx', keywords: ['5xx', 'server'] }
 ];
 
-const commonStatusOptions: MultiSelectOption[] = [
-	{ label: '200 OK', value: '200' },
-	{ label: '201 Created', value: '201' },
-	{ label: '202 Accepted', value: '202' },
-	{ label: '204 No Content', value: '204' },
-	{ label: '301 Moved Permanently', value: '301' },
-	{ label: '302 Found', value: '302' },
-	{ label: '400 Bad Request', value: '400' },
-	{ label: '401 Unauthorized', value: '401' },
-	{ label: '403 Forbidden', value: '403' },
-	{ label: '404 Not Found', value: '404' },
-	{ label: '429 Too Many Requests', value: '429' },
-	{ label: '500 Internal Server Error', value: '500' },
-	{ label: '502 Bad Gateway', value: '502' },
-	{ label: '503 Service Unavailable', value: '503' }
+const statusCodeEntries: Array<{ code: number; label: string; keywords?: string[] }> = [
+	// 1xx Informational
+	{ code: 100, label: 'Continue' },
+	{ code: 101, label: 'Switching Protocols' },
+	{ code: 102, label: 'Processing' },
+	{ code: 103, label: 'Early Hints' },
+	// 2xx Success
+	{ code: 200, label: 'OK' },
+	{ code: 201, label: 'Created' },
+	{ code: 202, label: 'Accepted' },
+	{ code: 203, label: 'Non-Authoritative Information' },
+	{ code: 204, label: 'No Content' },
+	{ code: 205, label: 'Reset Content' },
+	{ code: 206, label: 'Partial Content' },
+	{ code: 207, label: 'Multi-Status' },
+	{ code: 208, label: 'Already Reported' },
+	{ code: 226, label: 'IM Used' },
+	// 3xx Redirection
+	{ code: 300, label: 'Multiple Choices' },
+	{ code: 301, label: 'Moved Permanently' },
+	{ code: 302, label: 'Found' },
+	{ code: 303, label: 'See Other' },
+	{ code: 304, label: 'Not Modified' },
+	{ code: 305, label: 'Use Proxy' },
+	{ code: 306, label: 'Switch Proxy' },
+	{ code: 307, label: 'Temporary Redirect' },
+	{ code: 308, label: 'Permanent Redirect' },
+	// 4xx Client Error
+	{ code: 400, label: 'Bad Request' },
+	{ code: 401, label: 'Unauthorized' },
+	{ code: 402, label: 'Payment Required' },
+	{ code: 403, label: 'Forbidden' },
+	{ code: 404, label: 'Not Found' },
+	{ code: 405, label: 'Method Not Allowed' },
+	{ code: 406, label: 'Not Acceptable' },
+	{ code: 407, label: 'Proxy Authentication Required' },
+	{ code: 408, label: 'Request Timeout' },
+	{ code: 409, label: 'Conflict' },
+	{ code: 410, label: 'Gone' },
+	{ code: 411, label: 'Length Required' },
+	{ code: 412, label: 'Precondition Failed' },
+	{ code: 413, label: 'Payload Too Large' },
+	{ code: 414, label: 'URI Too Long' },
+	{ code: 415, label: 'Unsupported Media Type' },
+	{ code: 416, label: 'Range Not Satisfiable' },
+	{ code: 417, label: 'Expectation Failed' },
+	{ code: 418, label: "I'm a teapot" },
+	{ code: 421, label: 'Misdirected Request' },
+	{ code: 422, label: 'Unprocessable Content' },
+	{ code: 423, label: 'Locked' },
+	{ code: 424, label: 'Failed Dependency' },
+	{ code: 425, label: 'Too Early' },
+	{ code: 426, label: 'Upgrade Required' },
+	{ code: 428, label: 'Precondition Required' },
+	{ code: 429, label: 'Too Many Requests' },
+	{ code: 431, label: 'Request Header Fields Too Large' },
+	{ code: 451, label: 'Unavailable For Legal Reasons' },
+	// 5xx Server Error
+	{ code: 500, label: 'Internal Server Error' },
+	{ code: 501, label: 'Not Implemented' },
+	{ code: 502, label: 'Bad Gateway' },
+	{ code: 503, label: 'Service Unavailable' },
+	{ code: 504, label: 'Gateway Timeout' },
+	{ code: 505, label: 'HTTP Version Not Supported' },
+	{ code: 506, label: 'Variant Also Negotiates' },
+	{ code: 507, label: 'Insufficient Storage' },
+	{ code: 508, label: 'Loop Detected' },
+	{ code: 510, label: 'Not Extended' },
+	{ code: 511, label: 'Network Authentication Required' }
 ];
+
+const commonStatusOptions: MultiSelectOption[] = statusCodeEntries.map(({ code, label, keywords }) => ({
+	label: `${code} ${label}`,
+	value: code.toString(),
+	keywords
+}));
+
+export const successStatusCodes = statusCodeEntries
+	.filter(({ code }) => code >= 200 && code < 300)
+	.map(({ code }) => code.toString());
 
 export const acceptedStatusOptions: MultiSelectOption[] = [...statusRangeOptions, ...commonStatusOptions];

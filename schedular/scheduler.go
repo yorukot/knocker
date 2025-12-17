@@ -145,7 +145,7 @@ func scheduleMonitors(monitors []models.Monitor, asynqClient *asynq.Client) {
 			// Enqueue the task
 			info, err := asynqClient.Enqueue(
 				task,
-				asynq.Timeout(10*time.Second),
+				asynq.Timeout(120*time.Second),
 				// Route each region's task to its own queue so only the matching regional worker consumes it.
 				asynq.Queue(region),
 			)

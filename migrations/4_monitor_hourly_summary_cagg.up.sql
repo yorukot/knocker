@@ -1,13 +1,13 @@
 -- Ensure the pings table is a hypertable on the time column so continuous aggregates work.
 SELECT create_hypertable('pings', 'time', if_not_exists => TRUE);
 
--- Hourly rollup for availability and latency percentiles.
-CREATE MATERIALIZED VIEW monitor_hourly_summary
+-- 30-minute rollup for availability and latency percentiles.
+CREATE MATERIALIZED VIEW monitor_30min_summary
 WITH (timescaledb.continuous) AS
 SELECT
     monitor_id,
     region,
-    time_bucket('1 hour', time) AS bucket,
+    time_bucket('30 minutes', time) AS bucket,
     count(*) AS total_count,
     count(*) FILTER (
         WHERE status = 'successful' AND latency <= 5000
@@ -21,12 +21,13 @@ FROM pings
 GROUP BY monitor_id, region, bucket
 WITH NO DATA;
 
--- Keep the materialized view fresh: refresh last 24 hours every 15 minutes,
--- skipping the most recent hour to avoid hot buckets.
+-- Keep the materialized view fresh:
+-- refresh last 24 hours every 15 minutes,
+-- skipping the most recent 30 minutes to avoid hot buckets.
 SELECT add_continuous_aggregate_policy(
-    'monitor_hourly_summary',
+    'monitor_30min_summary',
     start_offset => INTERVAL '24 hours',
-    end_offset   => INTERVAL '1 hour',
+    end_offset   => INTERVAL '30 minutes',
     schedule_interval => INTERVAL '15 minutes'
 );
 

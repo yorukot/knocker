@@ -6,6 +6,11 @@ export type MonitorResponse = {
 	data: MonitorWithIncidents[];
 };
 
+export type MonitorSingleResponse = {
+	message: string;
+	data: Monitor;
+};
+
 export type MonitorCreateRequest = {
 	name: string;
 	type: 'http' | 'ping';
@@ -39,6 +44,11 @@ export type MonitorCreateResponse = {
 	data: Monitor;
 };
 
+export type MonitorUpdateResponse = {
+	message: string;
+	data: Monitor;
+};
+
 export type MonitorDeleteResponse = {
 	message: string;
 };
@@ -46,6 +56,12 @@ export type MonitorDeleteResponse = {
 export function getMonitors(teamID: string): Promise<MonitorResponse> {
 	return apiRequest<MonitorResponse>(`/teams/${teamID}/monitors`, {
 		defaultError: 'Failed to fetch monitors'
+	});
+}
+
+export function getMonitor(teamID: string, monitorID: string): Promise<MonitorSingleResponse> {
+	return apiRequest<MonitorSingleResponse>(`/teams/${teamID}/monitors/${monitorID}`, {
+		defaultError: 'Failed to fetch monitor'
 	});
 }
 
@@ -57,6 +73,18 @@ export function createMonitor(
 		method: 'POST',
 		body: payload,
 		defaultError: 'Failed to create monitor'
+	});
+}
+
+export function updateMonitor(
+	teamID: string,
+	monitorID: string,
+	payload: MonitorCreateRequest
+): Promise<MonitorUpdateResponse> {
+	return apiRequest<MonitorUpdateResponse>(`/teams/${teamID}/monitors/${monitorID}`, {
+		method: 'PUT',
+		body: payload,
+		defaultError: 'Failed to update monitor'
 	});
 }
 
