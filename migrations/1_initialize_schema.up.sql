@@ -126,7 +126,7 @@ CREATE TABLE "public"."pings" (
     "region" text NOT NULL,
     "latency" integer NOT NULL,
     "status" ping_status NOT NULL,
-    CONSTRAINT "pk_table_9_id" PRIMARY KEY ("time", "monitor_id")
+    CONSTRAINT "pk_table_9_id" PRIMARY KEY ("time", "monitor_id", "region")
 );
 
 CREATE TABLE "public"."incidents" (

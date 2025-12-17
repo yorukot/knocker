@@ -69,7 +69,7 @@ func loop(repo repository.Repository, asynqClient *asynq.Client) {
 
 	// In this we need to separate the monitors to different goroutines (100-200 monitors per goroutine)
 	// then call the scheduleMonitors function to insert into asynq queue
-	batchSize := 100 // 100-200 monitors per goroutine
+	batchSize := 20 // 100-200 monitors per goroutine
 	for i := 0; i < len(monitors); i += batchSize {
 		end := i + batchSize
 		end = min(end, len(monitors))
