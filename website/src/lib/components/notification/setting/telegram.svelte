@@ -3,18 +3,23 @@
 	import { validator } from '@felte/validator-zod';
 	import { z } from 'zod';
 	import { page } from '$app/state';
-	import { createNotification } from '$lib/api/notification';
+import { createNotification, updateNotification } from '$lib/api/notification';
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
 	import { Button } from '$lib/components/ui/button';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { toast } from 'svelte-sonner';
-	import type { Notification } from '../../../../types';
+import type { Notification, TelegramNotificationConfig } from '../../../../types';
 
-	let {
-		onCreated,
-		onClose
-	}: { onCreated?: (notification: Notification) => void; onClose: () => void } = $props();
+let {
+	notification = null,
+	onSaved,
+	onClose
+}: {
+	notification?: Notification | null;
+	onSaved?: (notification: Notification) => void;
+	onClose: () => void;
+} = $props();
 
 	const formSchema = z.object({
 		type: z.literal('telegram'),
@@ -27,11 +32,29 @@
 
 	type FormValues = z.infer<typeof formSchema>;
 
-	const initialValues: FormValues = {
+function deriveInitialValues(): FormValues {
+	if (notification) {
+		const cfg = notification.config as Partial<TelegramNotificationConfig> & {
+			bot_token?: string;
+			chat_id?: string;
+		};
+		return {
+			type: 'telegram',
+			name: notification.name,
+			config: {
+				botToken: cfg.botToken ?? cfg.bot_token ?? '',
+				chatId: cfg.chatId ?? cfg.chat_id ?? ''
+			}
+		};
+	}
+	return {
 		type: 'telegram',
 		name: '',
 		config: { botToken: '', chatId: '' }
 	};
+}
+
+const initialValues: FormValues = deriveInitialValues();
 
 	const { form, errors, isSubmitting, setFields, reset } = createForm<FormValues>({
 		initialValues,
@@ -54,7 +77,6 @@
 
 		try {
 			const payload = {
-				type: 'telegram' as const,
 				name: values.name,
 				config: {
 					bot_token: values.config.botToken,
@@ -62,18 +84,43 @@
 				}
 			};
 
-			const res = await createNotification(teamID, payload);
-			const created = res.data as unknown as Notification;
-			toast.success('Notification created');
+			let saved: Notification;
+			if (notification) {
+				const res = await updateNotification(teamID, notification.id, payload);
+				saved = res.data;
+				toast.success('Notification updated');
+			} else {
+				const res = await createNotification(teamID, { type: 'telegram', ...payload });
+				saved = res.data;
+				toast.success('Notification created');
+			}
+
 			resetForm();
 			onClose();
-			onCreated?.(created);
+			onSaved?.(saved);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to create notification';
+			const message =
+				err instanceof Error ? err.message : notification ? 'Failed to update notification' : 'Failed to create notification';
 			toast.error(message);
 			return { FORM_ERROR: message };
 		}
 	}
+
+$effect(() => {
+	if (notification) {
+		const cfg = notification.config as Partial<TelegramNotificationConfig> & {
+			bot_token?: string;
+			chat_id?: string;
+		};
+		setFields('name', notification.name);
+		setFields('config', {
+			botToken: cfg.botToken ?? cfg.bot_token ?? '',
+			chatId: cfg.chatId ?? cfg.chat_id ?? ''
+		} as FormValues['config']);
+		} else {
+			resetForm();
+		}
+	});
 </script>
 
 <form class="flex flex-col gap-4 h-full" use:form>
@@ -103,6 +150,8 @@
 	</Field.Set>
 
 	<Sheet.Footer class="flex justify-end gap-2 mt-auto">
-		<Button type="submit" disabled={$isSubmitting}>{$isSubmitting ? 'Creating…' : 'Create'}</Button>
+		<Button type="submit" disabled={$isSubmitting}>
+			{$isSubmitting ? (notification ? 'Saving…' : 'Creating…') : notification ? 'Save changes' : 'Create'}
+		</Button>
 	</Sheet.Footer>
 </form>

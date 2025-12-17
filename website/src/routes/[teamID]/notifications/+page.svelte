@@ -10,6 +10,7 @@
 	let { data } = $props();
 
 	let createOpen = $state(false);
+	let editingNotification = $state<Notification | null>(null);
 	type SupportedNotificationType = Extract<NotificationType, 'discord' | 'telegram'>;
 	let selectedType = $state<SupportedNotificationType>('discord');
 	let notifications = $derived(data.notifications);
@@ -22,8 +23,22 @@
 
 	function openCreator(type: SupportedNotificationType) {
 		selectedType = type;
+		editingNotification = null;
 		createOpen = true;
 	}
+
+	function startEdit(notification: Notification) {
+		if (notification.type === 'email') return;
+		selectedType = notification.type as SupportedNotificationType;
+		editingNotification = notification;
+		createOpen = true;
+	}
+
+	$effect(() => {
+		if (!createOpen) {
+			editingNotification = null;
+		}
+	});
 </script>
 
 <div class="flex flex-col gap-2">
@@ -55,14 +70,29 @@
 
 	<h1 class="text-xl font-semibold">Notifications</h1>
 	<div>
-		<NotificationsList {notifications} />
+		<NotificationsList
+			{notifications}
+			onEdit={(notification: Notification) => {
+				startEdit(notification);
+			}}
+		/>
 	</div>
 </div>
 
 <CreateNotificationSheet
 	bind:open={createOpen}
 	bind:selectedType
-	onCreated={(notification: Notification) => {
-		notifications = [notification, ...notifications];
+	notification={editingNotification}
+	onSaved={(notification: Notification) => {
+		const idx = notifications.findIndex((n) => n.id === notification.id);
+		if (idx >= 0) {
+			notifications = [
+				...notifications.slice(0, idx),
+				notification,
+				...notifications.slice(idx + 1)
+			];
+		} else {
+			notifications = [notification, ...notifications];
+		}
 	}}
 />

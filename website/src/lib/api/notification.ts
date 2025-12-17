@@ -11,12 +11,12 @@ export type NotificationCreateRequest = {
 	name: string;
 	config:
 		| {
-			webhook_url: string;
-		}
+				webhook_url: string;
+		  }
 		| {
-			bot_token: string;
-			chat_id: string;
-		};
+				bot_token: string;
+				chat_id: string;
+		  };
 };
 
 export type NotificationCreateResponse = {
@@ -30,6 +30,24 @@ export type NotificationDeleteResponse = {
 
 export type NotificationTestResponse = {
 	message: string;
+};
+
+export type NotificationUpdateRequest = Partial<{
+	type: NotificationType;
+	name: string;
+	config:
+		| {
+				webhook_url: string;
+		  }
+		| {
+				bot_token: string;
+				chat_id: string;
+		  };
+}>;
+
+export type NotificationUpdateResponse = {
+	message: string;
+	data: Notification;
 };
 
 export function getNotifications(teamID: string): Promise<NotificationsResponse> {
@@ -53,10 +71,13 @@ export function deleteNotification(
 	teamID: string,
 	notificationID: string
 ): Promise<NotificationDeleteResponse> {
-	return apiRequest<NotificationDeleteResponse>(`/teams/${teamID}/notifications/${notificationID}`, {
-		method: 'DELETE',
-		defaultError: 'Failed to delete notification'
-	});
+	return apiRequest<NotificationDeleteResponse>(
+		`/teams/${teamID}/notifications/${notificationID}`,
+		{
+			method: 'DELETE',
+			defaultError: 'Failed to delete notification'
+		}
+	);
 }
 
 export function testNotification(
@@ -68,6 +89,21 @@ export function testNotification(
 		{
 			method: 'POST',
 			defaultError: 'Failed to send test notification'
+		}
+	);
+}
+
+export function updateNotification(
+	teamID: string,
+	notificationID: string,
+	payload: NotificationUpdateRequest
+): Promise<NotificationUpdateResponse> {
+	return apiRequest<NotificationUpdateResponse>(
+		`/teams/${teamID}/notifications/${notificationID}`,
+		{
+			method: 'PATCH',
+			body: payload,
+			defaultError: 'Failed to update notification'
 		}
 	);
 }

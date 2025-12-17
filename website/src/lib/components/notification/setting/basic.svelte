@@ -11,12 +11,21 @@
 	let {
 		open = $bindable(false),
 		selectedType = $bindable<SupportedNotificationType>('discord'),
-		onCreated
+		notification = null,
+		onSaved
 	}: {
 		open: boolean;
 		selectedType: SupportedNotificationType;
-		onCreated?: (notification: Notification) => void;
+		notification?: Notification | null;
+		onSaved?: (notification: Notification) => void;
 	} = $props();
+
+	$effect(() => {
+		if (notification) {
+			// lock selected type to the notification being edited
+			selectedType = notification.type as SupportedNotificationType;
+		}
+	});
 </script>
 
 <Sheet.Root bind:open onOpenChange={(next) => (open = next)}>
@@ -34,16 +43,20 @@
 
 			{#if selectedType === 'discord'}
 				<DiscordForm
-					{onCreated}
+					notification={notification}
+					onSaved={onSaved}
 					onClose={() => {
 						open = false;
+						notification = null;
 					}}
 				/>
 			{:else if selectedType === 'telegram'}
 				<TelegramForm
-					{onCreated}
+					notification={notification}
+					onSaved={onSaved}
 					onClose={() => {
 						open = false;
+						notification = null;
 					}}
 				/>
 			{/if}

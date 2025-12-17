@@ -3,9 +3,9 @@
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import Icon from '@iconify/svelte';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { buttonVariants } from '$lib/components/ui/button';
-	import { cn } from '$lib/utils';
+  import * as AlertDialog from '$lib/components/ui/alert-dialog';
+  import { buttonVariants } from '$lib/components/ui/button';
+  import { cn } from '$lib/utils';
 	import { decidedNotificationIcon, notificationTypeMeta } from '$lib/utils/notification';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Notification } from '../../../types';
@@ -13,7 +13,10 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 
-	let { notifications }: { notifications: Notification[] } = $props();
+  let {
+    notifications,
+    onEdit
+  }: { notifications: Notification[]; onEdit?: (notification: Notification) => void } = $props();
 	let testingId = $state<string | null>(null);
 	let deleteOpen = $state(false);
 	let deletingId = $state<string | null>(null);
@@ -120,14 +123,11 @@
 								{/if}
 								Send test
 							</DropdownMenu.Item>
-							<DropdownMenu.Item>
+							<DropdownMenu.Item onclick={() => onEdit?.(notification)}>
 								<Icon icon="lucide:edit" /> Edit
 							</DropdownMenu.Item>
 							<DropdownMenu.Separator />
-							<DropdownMenu.Item
-								variant="destructive"
-								onclick={() => confirmDelete(notification)}
-							>
+							<DropdownMenu.Item variant="destructive" onclick={() => confirmDelete(notification)}>
 								<Icon icon="lucide:trash" /> Delete
 							</DropdownMenu.Item>
 						</DropdownMenu.Group>
