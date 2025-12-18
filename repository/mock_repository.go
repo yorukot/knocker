@@ -191,6 +191,12 @@ func (m *MockRepository) BatchUpdateMonitorsLastChecked(ctx context.Context, tx 
 	return args.Error(0)
 }
 
+func (m *MockRepository) ListRegionsByIDs(ctx context.Context, tx pgx.Tx, regionIDs []int64) ([]models.Region, error) {
+	args := m.Called(ctx, tx, regionIDs)
+	regions, _ := args.Get(0).([]models.Region)
+	return regions, args.Error(1)
+}
+
 func (m *MockRepository) BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []models.Ping) error {
 	args := m.Called(ctx, tx, pings)
 	return args.Error(0)
@@ -212,6 +218,16 @@ func (m *MockRepository) GetNotificationIDsByMonitorID(ctx context.Context, tx p
 	return notificationIDs, args.Error(1)
 }
 
+func (m *MockRepository) CreateMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64, regions []models.Region) error {
+	args := m.Called(ctx, tx, monitorID, regions)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64) error {
+	args := m.Called(ctx, tx, monitorID)
+	return args.Error(0)
+}
+
 func (m *MockRepository) GetOpenIncidentByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) (*models.Incident, error) {
 	args := m.Called(ctx, tx, monitorID)
 	incident, _ := args.Get(0).(*models.Incident)
@@ -223,24 +239,35 @@ func (m *MockRepository) CreateIncident(ctx context.Context, tx pgx.Tx, incident
 	return args.Error(0)
 }
 
+func (m *MockRepository) CreateIncidentMonitor(ctx context.Context, tx pgx.Tx, incidentID, monitorID int64) error {
+	args := m.Called(ctx, tx, incidentID, monitorID)
+	return args.Error(0)
+}
+
 func (m *MockRepository) MarkIncidentResolved(ctx context.Context, tx pgx.Tx, incidentID int64, resolvedAt, updatedAt time.Time) error {
 	args := m.Called(ctx, tx, incidentID, resolvedAt, updatedAt)
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateIncidentEvent(ctx context.Context, tx pgx.Tx, event models.IncidentEvent) error {
-	args := m.Called(ctx, tx, event)
+func (m *MockRepository) CreateEventTimeline(ctx context.Context, tx pgx.Tx, timeline models.EventTimeline) error {
+	args := m.Called(ctx, tx, timeline)
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetLastIncidentEvent(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.IncidentEvent, error) {
+func (m *MockRepository) GetLastEventTimeline(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.EventTimeline, error) {
 	args := m.Called(ctx, tx, incidentID)
-	event, _ := args.Get(0).(*models.IncidentEvent)
+	event, _ := args.Get(0).(*models.EventTimeline)
 	return event, args.Error(1)
 }
 
 func (m *MockRepository) ListIncidentsByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) ([]models.Incident, error) {
 	args := m.Called(ctx, tx, monitorID)
+	incidents, _ := args.Get(0).([]models.Incident)
+	return incidents, args.Error(1)
+}
+
+func (m *MockRepository) ListIncidentsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Incident, error) {
+	args := m.Called(ctx, tx, teamID)
 	incidents, _ := args.Get(0).([]models.Incident)
 	return incidents, args.Error(1)
 }
@@ -251,9 +278,15 @@ func (m *MockRepository) GetIncidentByID(ctx context.Context, tx pgx.Tx, monitor
 	return incident, args.Error(1)
 }
 
-func (m *MockRepository) ListIncidentEventsByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.IncidentEvent, error) {
+func (m *MockRepository) GetIncidentByIDForTeam(ctx context.Context, tx pgx.Tx, teamID, incidentID int64) (*models.Incident, error) {
+	args := m.Called(ctx, tx, teamID, incidentID)
+	incident, _ := args.Get(0).(*models.Incident)
+	return incident, args.Error(1)
+}
+
+func (m *MockRepository) ListEventTimelinesByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.EventTimeline, error) {
 	args := m.Called(ctx, tx, incidentID)
-	events, _ := args.Get(0).([]models.IncidentEvent)
+	events, _ := args.Get(0).([]models.EventTimeline)
 	return events, args.Error(1)
 }
 
@@ -263,8 +296,19 @@ func (m *MockRepository) UpdateIncidentStatus(ctx context.Context, tx pgx.Tx, in
 	return incident, args.Error(1)
 }
 
-func (m *MockRepository) ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, region string, limit int) ([]models.Ping, error) {
-	args := m.Called(ctx, tx, monitorID, region, limit)
+func (m *MockRepository) ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, regionID int64, limit int) ([]models.Ping, error) {
+	args := m.Called(ctx, tx, monitorID, regionID, limit)
 	pings, _ := args.Get(0).([]models.Ping)
 	return pings, args.Error(1)
+}
+
+func (m *MockRepository) UpdateMonitorStatus(ctx context.Context, tx pgx.Tx, monitorID int64, status models.MonitorStatus, updatedAt time.Time) error {
+	args := m.Called(ctx, tx, monitorID, status, updatedAt)
+	return args.Error(0)
+}
+
+func (m *MockRepository) ListAllRegions(ctx context.Context, tx pgx.Tx) ([]models.Region, error) {
+	args := m.Called(ctx, tx)
+	regions, _ := args.Get(0).([]models.Region)
+	return regions, args.Error(1)
 }

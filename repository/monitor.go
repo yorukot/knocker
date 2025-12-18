@@ -14,8 +14,8 @@ import (
 // CreateMonitor inserts a monitor record.
 func (r *PGRepository) CreateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) error {
 	query := `
-		INSERT INTO monitors (id, team_id, name, type, interval, config, last_checked, next_check, failure_threshold, recovery_threshold, updated_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO monitors (id, team_id, name, type, interval, config, last_checked, next_check, status, failure_threshold, recovery_threshold, updated_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
 	_, err := tx.Exec(ctx, query,
@@ -27,6 +27,7 @@ func (r *PGRepository) CreateMonitor(ctx context.Context, tx pgx.Tx, monitor mod
 		monitor.Config,
 		monitor.LastChecked,
 		monitor.NextCheck,
+		monitor.Status,
 		monitor.FailureThreshold,
 		monitor.RecoveryThreshold,
 		monitor.UpdatedAt,
@@ -47,19 +48,23 @@ func (r *PGRepository) ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, team
 			m.config,
 			m.last_checked,
 			m.next_check,
+			m.status,
 			m.failure_threshold,
 			m.recovery_threshold,
 			m.updated_at,
 			m.created_at,
-			COALESCE(
-				array_agg(mn.notification_id ORDER BY mn.id)
-					FILTER (WHERE mn.notification_id IS NOT NULL),
-				'{}'
-			) AS notification_ids
+			COALESCE((
+				SELECT array_agg(mn.notification_id ORDER BY mn.id)
+				FROM monitor_notifications mn
+				WHERE mn.monitor_id = m.id
+			), '{}') AS notification_ids,
+			COALESCE((
+				SELECT array_agg(mr.region_id ORDER BY mr.id)
+				FROM monitor_regions mr
+				WHERE mr.monitor_id = m.id
+			), '{}') AS region_ids
 		FROM monitors m
-		LEFT JOIN monitor_notifications mn ON m.id = mn.monitor_id
 		WHERE m.team_id = $1
-		GROUP BY m.id, m.team_id, m.name, m.type, m.interval, m.config, m.last_checked, m.next_check, m.failure_threshold, m.recovery_threshold, m.updated_at, m.created_at
 		ORDER BY m.created_at DESC
 	`
 
@@ -83,19 +88,23 @@ func (r *PGRepository) GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, mo
 			m.config,
 			m.last_checked,
 			m.next_check,
+			m.status,
 			m.failure_threshold,
 			m.recovery_threshold,
 			m.updated_at,
 			m.created_at,
-			COALESCE(
-				array_agg(mn.notification_id ORDER BY mn.id)
-					FILTER (WHERE mn.notification_id IS NOT NULL),
-				'{}'
-			) AS notification_ids
+			COALESCE((
+				SELECT array_agg(mn.notification_id ORDER BY mn.id)
+				FROM monitor_notifications mn
+				WHERE mn.monitor_id = m.id
+			), '{}') AS notification_ids,
+			COALESCE((
+				SELECT array_agg(mr.region_id ORDER BY mr.id)
+				FROM monitor_regions mr
+				WHERE mr.monitor_id = m.id
+			), '{}') AS region_ids
 		FROM monitors m
-		LEFT JOIN monitor_notifications mn ON m.id = mn.monitor_id
 		WHERE m.id = $1 AND m.team_id = $2
-		GROUP BY m.id, m.team_id, m.name, m.type, m.interval, m.config, m.last_checked, m.next_check, m.failure_threshold, m.recovery_threshold, m.updated_at, m.created_at
 	`
 
 	var monitor models.Monitor
@@ -113,9 +122,9 @@ func (r *PGRepository) GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, mo
 func (r *PGRepository) UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor models.Monitor) (*models.Monitor, error) {
 	query := `
 		UPDATE monitors
-		SET name = $1, type = $2, interval = $3, config = $4, last_checked = $5, next_check = $6, failure_threshold = $7, recovery_threshold = $8, updated_at = $9
-		WHERE id = $10 AND team_id = $11
-		RETURNING id, team_id, name, type, interval, config, last_checked, next_check, failure_threshold, recovery_threshold, updated_at, created_at
+		SET name = $1, type = $2, interval = $3, config = $4, last_checked = $5, next_check = $6, status = $7, failure_threshold = $8, recovery_threshold = $9, updated_at = $10
+		WHERE id = $11 AND team_id = $12
+		RETURNING id, team_id, name, type, interval, config, last_checked, next_check, status, failure_threshold, recovery_threshold, updated_at, created_at
 	`
 
 	var updated models.Monitor
@@ -126,6 +135,7 @@ func (r *PGRepository) UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor mod
 		monitor.Config,
 		monitor.LastChecked,
 		monitor.NextCheck,
+		monitor.Status,
 		monitor.FailureThreshold,
 		monitor.RecoveryThreshold,
 		monitor.UpdatedAt,
@@ -140,6 +150,7 @@ func (r *PGRepository) UpdateMonitor(ctx context.Context, tx pgx.Tx, monitor mod
 		&updated.Config,
 		&updated.LastChecked,
 		&updated.NextCheck,
+		&updated.Status,
 		&updated.FailureThreshold,
 		&updated.RecoveryThreshold,
 		&updated.UpdatedAt,
@@ -168,13 +179,37 @@ func (r *PGRepository) DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, mon
 	return nil
 }
 
+// UpdateMonitorStatus updates only the status and updated_at fields of a monitor.
+func (r *PGRepository) UpdateMonitorStatus(ctx context.Context, tx pgx.Tx, monitorID int64, status models.MonitorStatus, updatedAt time.Time) error {
+	_, err := tx.Exec(ctx, `UPDATE monitors SET status = $1, updated_at = $2 WHERE id = $3`, status, updatedAt, monitorID)
+	return err
+}
+
 // ListMonitorsDueForCheck fetches all monitors where next_check <= now
 func (r *PGRepository) ListMonitorsDueForCheck(ctx context.Context, tx pgx.Tx) ([]models.Monitor, error) {
 	query := `
-		SELECT id, team_id, name, type, interval, config, last_checked, next_check, failure_threshold, recovery_threshold, updated_at, created_at
-		FROM monitors
-		WHERE next_check <= NOW()
-		ORDER BY next_check ASC
+		SELECT
+			m.id,
+			m.team_id,
+			m.name,
+			m.type,
+			m.interval,
+			m.config,
+			m.last_checked,
+			m.next_check,
+			m.status,
+			m.failure_threshold,
+			m.recovery_threshold,
+			m.updated_at,
+			m.created_at,
+			COALESCE((
+				SELECT array_agg(mr.region_id ORDER BY mr.id)
+				FROM monitor_regions mr
+				WHERE mr.monitor_id = m.id
+			), '{}') AS region_ids
+		FROM monitors m
+		WHERE m.next_check <= NOW()
+		ORDER BY m.next_check ASC
 	`
 
 	var monitors []models.Monitor
@@ -274,4 +309,55 @@ func (r *PGRepository) GetNotificationIDsByMonitorID(ctx context.Context, tx pgx
 	}
 
 	return notificationIDs, nil
+}
+
+// ListRegionsByIDs fetches region rows for the given IDs.
+func (r *PGRepository) ListRegionsByIDs(ctx context.Context, tx pgx.Tx, regionIDs []int64) ([]models.Region, error) {
+	if len(regionIDs) == 0 {
+		return []models.Region{}, nil
+	}
+
+	query := `
+		SELECT id, name, display_name
+		FROM regions
+		WHERE id = ANY($1)
+	`
+
+	var regions []models.Region
+	if err := pgxscan.Select(ctx, tx, &regions, query, regionIDs); err != nil {
+		return nil, err
+	}
+
+	return regions, nil
+}
+
+// CreateMonitorRegions inserts associations between a monitor and regions.
+func (r *PGRepository) CreateMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64, regions []models.Region) error {
+	if len(regions) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO monitor_regions (id, monitor_id, region_id)
+		VALUES ($1, $2, $3, $4)
+	`
+
+	for _, region := range regions {
+		junctionID, err := id.GetID()
+		if err != nil {
+			return fmt.Errorf("failed to generate junction table ID: %w", err)
+		}
+
+		if _, err := tx.Exec(ctx, query, junctionID, monitorID, region.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DeleteMonitorRegions removes all region associations for a monitor.
+func (r *PGRepository) DeleteMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64) error {
+	_, err := tx.Exec(ctx, `DELETE FROM monitor_regions WHERE monitor_id = $1`, monitorID)
+	return err
 }

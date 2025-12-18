@@ -13,7 +13,8 @@ func IncidentRouter(api *echo.Group, repo repository.Repository) {
 		Repo: repo,
 	}
 
-	r := api.Group("/teams/:teamID/monitors/:monitorID/incidents", middleware.AuthRequiredMiddleware)
+	// Monitor-scoped read/update for backwards compatibility
+	r := api.Group("/teams/:teamID/incidents", middleware.AuthRequiredMiddleware)
 	r.POST("", incidentHandler.CreateIncident)
 	r.GET("", incidentHandler.ListIncidents)
 	r.GET("/:incidentID", incidentHandler.GetIncident)

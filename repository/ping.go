@@ -21,7 +21,7 @@ func (r *PGRepository) BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []
 		rows = append(rows, []any{
 			ping.Time,
 			ping.MonitorID,
-			ping.Region,
+			ping.RegionID,
 			ping.Latency,
 			ping.Status,
 		})
@@ -31,7 +31,7 @@ func (r *PGRepository) BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []
 	copied, err := tx.CopyFrom(
 		ctx,
 		pgx.Identifier{"pings"},
-		[]string{"time", "monitor_id", "region", "latency", "status"},
+		[]string{"time", "monitor_id", "region_id", "latency", "status"},
 		pgx.CopyFromRows(rows),
 	)
 	if err != nil {
@@ -46,21 +46,21 @@ func (r *PGRepository) BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []
 }
 
 // ListRecentPingsByMonitorIDAndRegion fetches the latest pings for a monitor in a region, ordered newest first.
-func (r *PGRepository) ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, region string, limit int) ([]models.Ping, error) {
+func (r *PGRepository) ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, regionID int64, limit int) ([]models.Ping, error) {
 	if limit <= 0 {
 		return []models.Ping{}, nil
 	}
 
 	const query = `
-		SELECT time, monitor_id, region, latency, status
+		SELECT time, monitor_id, region_id, latency, status
 		FROM pings
-		WHERE monitor_id = $1 AND region = $2
+		WHERE monitor_id = $1 AND region_id = $2
 		ORDER BY time DESC
 		LIMIT $3
 	`
 
 	var pings []models.Ping
-	if err := pgxscan.Select(ctx, tx, &pings, query, monitorID, region, limit); err != nil {
+	if err := pgxscan.Select(ctx, tx, &pings, query, monitorID, regionID, limit); err != nil {
 		return nil, err
 	}
 

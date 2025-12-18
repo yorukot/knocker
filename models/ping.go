@@ -16,7 +16,7 @@ const (
 type Ping struct {
 	Time      time.Time  `json:"time" db:"time"`
 	MonitorID int64      `json:"monitor_id,string" db:"monitor_id"`
+	RegionID  int64      `json:"region_id,string" db:"region_id"`
 	Latency   int        `json:"latency" db:"latency"`
 	Status    PingStatus `json:"status" db:"status"`
-	Region    string     `json:"region" db:"region"`
 }

@@ -16,6 +16,13 @@ const (
 	MonitorTypePing MonitorType = "ping"
 )
 
+type MonitorStatus string
+
+const (
+	MonitorStatusUp   MonitorStatus = "up"
+	MonitorStatusDown MonitorStatus = "down"
+)
+
 type NotificationType string
 
 const (
@@ -36,6 +43,7 @@ type Monitor struct {
 	Type     MonitorType     `json:"type" db:"type"`
 	Config   json.RawMessage `json:"config" db:"config"`
 	Interval int             `json:"interval" db:"interval"`
+	Status   MonitorStatus   `json:"status" db:"status"`
 
 	// Scheduling
 	LastChecked time.Time `json:"last_checked" db:"last_checked"`
@@ -44,6 +52,9 @@ type Monitor struct {
 	// Thresholds
 	FailureThreshold  int16 `json:"failure_threshold" db:"failure_threshold"`
 	RecoveryThreshold int16 `json:"recovery_threshold" db:"recovery_threshold"`
+
+	// Regions
+	RegionIDs []int64 `json:"regions" db:"region_ids"`
 
 	// Notifications
 	NotificationIDs []int64 `json:"notification" db:"notification_ids"`

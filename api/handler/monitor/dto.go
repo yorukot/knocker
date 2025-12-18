@@ -2,11 +2,11 @@ package monitor
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/utils"
 )
 
 type monitorResponse struct {
@@ -20,6 +20,7 @@ type monitorResponse struct {
 	NextCheck         time.Time          `json:"next_check"`
 	FailureThreshold  int16              `json:"failure_threshold"`
 	RecoveryThreshold int16              `json:"recovery_threshold"`
+	RegionIDs         []string           `json:"regions"`
 	NotificationIDs   []string           `json:"notification"`
 	Incidents         []incidentResponse `json:"incidents,omitempty"`
 	UpdatedAt         time.Time          `json:"updated_at"`
@@ -36,56 +37,8 @@ type incidentResponse struct {
 	UpdatedAt  time.Time             `json:"updated_at"`
 }
 
-type notificationIDList []int64
-
-func (n *notificationIDList) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 || string(data) == "null" {
-		return nil
-	}
-
-	var raw []json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("notification must be an array of IDs")
-	}
-
-	ids := make([]int64, 0, len(raw))
-	for i, item := range raw {
-		var str string
-		if err := json.Unmarshal(item, &str); err == nil {
-			id, err := strconv.ParseInt(str, 10, 64)
-			if err != nil {
-				return fmt.Errorf("notification[%d] must be a valid integer string", i)
-			}
-			if id <= 0 {
-				return fmt.Errorf("notification[%d] must be a positive integer", i)
-			}
-			ids = append(ids, id)
-			continue
-		}
-
-		var num json.Number
-		if err := json.Unmarshal(item, &num); err == nil {
-			id, err := num.Int64()
-			if err != nil {
-				return fmt.Errorf("notification[%d] must be a valid integer", i)
-			}
-			if id <= 0 {
-				return fmt.Errorf("notification[%d] must be a positive integer", i)
-			}
-			ids = append(ids, id)
-			continue
-		}
-
-		return fmt.Errorf("notification[%d] must be a string or number", i)
-	}
-
-	*n = ids
-	return nil
-}
-
-func (n notificationIDList) Int64s() []int64 {
-	return []int64(n)
-}
+type notificationIDList = utils.IDList
+type regionIDList = utils.IDList
 
 func newMonitorResponse(m models.Monitor) monitorResponse {
 	return monitorResponse{
@@ -99,6 +52,7 @@ func newMonitorResponse(m models.Monitor) monitorResponse {
 		NextCheck:         m.NextCheck,
 		FailureThreshold:  m.FailureThreshold,
 		RecoveryThreshold: m.RecoveryThreshold,
+		RegionIDs:         formatRegionIDs(m.RegionIDs),
 		NotificationIDs:   formatNotificationIDs(m.NotificationIDs),
 		Incidents:         []incidentResponse{},
 		UpdatedAt:         m.UpdatedAt,
@@ -108,7 +62,7 @@ func newMonitorResponse(m models.Monitor) monitorResponse {
 
 func newMonitorResponseWithIncidents(m models.MonitorWithIncidents) monitorResponse {
 	resp := newMonitorResponse(m.Monitor)
-	resp.Incidents = formatIncidents(m.Incidents)
+	resp.Incidents = formatIncidents(m.ID, m.Incidents)
 	return resp
 }
 
@@ -140,7 +94,19 @@ func formatNotificationIDs(ids []int64) []string {
 	return result
 }
 
-func formatIncidents(incidents []models.Incident) []incidentResponse {
+func formatRegionIDs(ids []int64) []string {
+	if len(ids) == 0 {
+		return []string{}
+	}
+
+	result := make([]string, len(ids))
+	for i, id := range ids {
+		result[i] = strconv.FormatInt(id, 10)
+	}
+	return result
+}
+
+func formatIncidents(monitorID int64, incidents []models.Incident) []incidentResponse {
 	if len(incidents) == 0 {
 		return []incidentResponse{}
 	}
@@ -149,7 +115,7 @@ func formatIncidents(incidents []models.Incident) []incidentResponse {
 	for i, incident := range incidents {
 		result[i] = incidentResponse{
 			ID:         strconv.FormatInt(incident.ID, 10),
-			MonitorID:  strconv.FormatInt(incident.MonitorID, 10),
+			MonitorID:  strconv.FormatInt(monitorID, 10),
 			Status:     incident.Status,
 			StartedAt:  incident.StartedAt,
 			ResolvedAt: incident.ResolvedAt,

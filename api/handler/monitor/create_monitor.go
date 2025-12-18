@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/utils"
 	authutil "github.com/yorukot/knocker/utils/auth"
 	"github.com/yorukot/knocker/utils/id"
 	"github.com/yorukot/knocker/utils/response"
@@ -22,6 +23,7 @@ type createMonitorRequest struct {
 	Config            json.RawMessage    `json:"config" validate:"required"`
 	FailureThreshold  int16              `json:"failure_threshold" validate:"required,gt=0"`
 	RecoveryThreshold int16              `json:"recovery_threshold" validate:"required,gt=0"`
+	Regions           regionIDList       `json:"regions" validate:"required,min=1"`
 	NotificationIDs   notificationIDList `json:"notification"`
 }
 
@@ -57,6 +59,10 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 
 	if len(req.Config) == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Monitor config is required")
+	}
+
+	if len(req.Regions) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "At least one region is required")
 	}
 
 	userID, err := authutil.GetUserIDFromContext(c)
@@ -97,18 +103,31 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 	}
 
 	now := time.Now()
+	regionIDs := utils.UniqueInt64s(req.Regions.Int64s())
+	regions, err := h.Repo.ListRegionsByIDs(c.Request().Context(), tx, regionIDs)
+	if err != nil {
+		zap.L().Error("Failed to load regions", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load regions")
+	}
+
+	if len(regions) != len(regionIDs) {
+		return echo.NewHTTPError(http.StatusBadRequest, "One or more regions do not exist")
+	}
+
 	notificationIDs := req.NotificationIDs.Int64s()
 	monitor := models.Monitor{
 		ID:                monitorID,
 		TeamID:            teamID,
 		Name:              req.Name,
 		Type:              req.Type,
+		Status:            models.MonitorStatusUp, // newly created monitors start in healthy state
 		Interval:          req.Interval,
 		Config:            req.Config,
 		LastChecked:       now,
 		NextCheck:         now.Add(time.Duration(req.Interval) * time.Second),
 		FailureThreshold:  req.FailureThreshold,
 		RecoveryThreshold: req.RecoveryThreshold,
+		RegionIDs:         regionIDs,
 		NotificationIDs:   notificationIDs,
 		UpdatedAt:         now,
 		CreatedAt:         now,
@@ -127,11 +146,17 @@ func (h *MonitorHandler) CreateMonitor(c echo.Context) error {
 		}
 	}
 
+	if err := h.Repo.CreateMonitorRegions(c.Request().Context(), tx, monitorID, regions); err != nil {
+		zap.L().Error("Failed to create monitor regions", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create monitor regions")
+	}
+
 	if err := h.Repo.CommitTransaction(tx, c.Request().Context()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
 	monitor.NotificationIDs = notificationIDs
+	monitor.RegionIDs = regionIDs
 
 	return c.JSON(http.StatusOK, response.Success("Monitor created successfully", newMonitorResponse(monitor)))
 }

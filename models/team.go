@@ -30,8 +30,8 @@ type TeamMember struct {
 type TeamInvite struct {
 	ID        int64     `json:"id,string" db:"id"`
 	TeamID    int64     `json:"team_id,string" db:"team_id"`
-	InvitedBy int64     `json:"invited_by,string" db:"Invited_by"`
-	InvitedTo int64     `json:"invited_to,string" db:"Invited_to"`
+	InvitedBy int64     `json:"invited_by,string" db:"invited_by"`
+	InvitedTo int64     `json:"invited_to,string" db:"invited_to"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

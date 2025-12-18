@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	monitorcore "github.com/yorukot/knocker/core/monitor"
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/utils/config"
+	"github.com/yorukot/knocker/utils/id"
 	"github.com/yorukot/knocker/worker/tasks"
 	"go.uber.org/zap"
 )
@@ -25,23 +28,23 @@ func (h *Handler) HandleStartServiceTask(ctx context.Context, t *asynq.Task) err
 		return err
 	}
 
-	ping, detail, err := h.pingMonitor(ctx, payload.Monitor, payload.Region)
+	ping, detail, err := h.pingMonitor(ctx, payload.Monitor, payload.RegionID)
 	if err != nil {
 		zap.L().Warn("monitor ping encountered error",
 			zap.Int64("monitor_id", payload.Monitor.ID),
-			zap.String("region", payload.Region),
+			zap.Int64("region_id", payload.RegionID),
 			zap.Error(err))
 	}
 
 	h.pingBuffer.Record(ctx, ping)
 
-	h.processIncident(ctx, payload.Monitor, ping, payload.Region, detail)
+	h.processIncident(ctx, payload.Monitor, ping, payload.RegionID, detail)
 
 	// Errors are logged and captured in ping history; returning nil prevents repeated retries.
 	return nil
 }
 
-func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, region string) (models.Ping, string, error) {
+func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, regionID int64) (models.Ping, string, error) {
 	result, err := monitorcore.Run(ctx, monitor)
 
 	message := ""
@@ -54,7 +57,7 @@ func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, regio
 	ping := models.Ping{
 		Time:      time.Now().UTC(),
 		MonitorID: monitor.ID,
-		Region:    region,
+		RegionID:  regionID,
 		Status:    models.PingStatusFailed,
 		Latency:   0,
 	}
@@ -67,7 +70,7 @@ func (h *Handler) pingMonitor(ctx context.Context, monitor models.Monitor, regio
 	return ping, message, err
 }
 
-func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.Ping, region string, detail string) {
+func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.Ping, regionID int64, detail string) {
 	if h.notifier == nil {
 		return
 	}
@@ -108,7 +111,7 @@ func (h *Handler) enqueueNotificationTasks(monitor models.Monitor, ping models.P
 			TeamID:         monitor.TeamID,
 			MonitorID:      monitor.ID,
 			NotificationID: notificationID,
-			Region:         region,
+			RegionID:       regionID,
 			Ping:           ping,
 			Detail:         detail,
 		}
@@ -137,19 +140,22 @@ func clampLatencyMs(duration time.Duration) int64 {
 		return 0
 	}
 
-	const maxLatencyMs = int64(math.MaxInt32)
+	const maxLatencyMs = int64(math.MaxInt64)
 	if ms > maxLatencyMs {
 		return maxLatencyMs
 	}
 	return ms
 }
 
-func (h *Handler) processIncident(ctx context.Context, monitor models.Monitor, ping models.Ping, region, detail string) {
+func (h *Handler) processIncident(ctx context.Context, monitor models.Monitor, ping models.Ping, regionID int64, detail string) {
+	region := config.RegionByID(regionID)
+
 	tx, err := h.repo.StartTransaction(ctx)
 	if err != nil {
 		zap.L().Error("failed to start incident transaction",
 			zap.Int64("monitor_id", monitor.ID),
-			zap.String("region", region),
+			zap.Int64("region_id", regionID),
+			zap.String("region_name", region.Name),
 			zap.Error(err))
 		return
 	}
@@ -166,16 +172,37 @@ func (h *Handler) processIncident(ctx context.Context, monitor models.Monitor, p
 	var notify bool
 	var notifyDetail string
 
+	// Update monitor status based on latest ping before incident logic.
+	targetStatus := monitor.Status
 	if ping.Status == models.PingStatusSuccessful {
-		notify, notifyDetail, err = h.handleIncidentRecovery(ctx, tx, monitor, ping, region, detail, openIncident)
+		targetStatus = models.MonitorStatusUp
 	} else {
-		notify, notifyDetail, err = h.handleIncidentFailure(ctx, tx, monitor, ping, region, detail, openIncident)
+		targetStatus = models.MonitorStatusDown
+	}
+	if targetStatus != monitor.Status {
+		if err := h.repo.UpdateMonitorStatus(ctx, tx, monitor.ID, targetStatus, time.Now().UTC()); err != nil {
+			zap.L().Error("failed to update monitor status",
+				zap.Int64("monitor_id", monitor.ID),
+				zap.Int64("region_id", regionID),
+				zap.String("region_name", region.Name),
+				zap.String("target_status", string(targetStatus)),
+				zap.Error(err))
+			return
+		}
+		monitor.Status = targetStatus
+	}
+
+	if ping.Status == models.PingStatusSuccessful {
+		notify, notifyDetail, err = h.handleIncidentRecovery(ctx, tx, monitor, ping, regionID, detail, openIncident)
+	} else {
+		notify, notifyDetail, err = h.handleIncidentFailure(ctx, tx, monitor, ping, regionID, detail, openIncident)
 	}
 
 	if err != nil {
 		zap.L().Error("incident handling failed",
 			zap.Int64("monitor_id", monitor.ID),
-			zap.String("region", region),
+			zap.Int64("region_id", regionID),
+			zap.String("region_name", region.Name),
 			zap.Error(err))
 		return
 	}
@@ -183,17 +210,18 @@ func (h *Handler) processIncident(ctx context.Context, monitor models.Monitor, p
 	if err := h.repo.CommitTransaction(tx, ctx); err != nil {
 		zap.L().Error("failed to commit incident transaction",
 			zap.Int64("monitor_id", monitor.ID),
-			zap.String("region", region),
+			zap.Int64("region_id", regionID),
+			zap.String("region_name", region.Name),
 			zap.Error(err))
 		return
 	}
 
 	if notify {
-		h.enqueueNotificationTasks(monitor, ping, region, notifyDetail)
+		h.enqueueNotificationTasks(monitor, ping, regionID, notifyDetail)
 	}
 }
 
-func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor models.Monitor, ping models.Ping, region, detail string, openIncident *models.Incident) (bool, string, error) {
+func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor models.Monitor, ping models.Ping, regionID int64, detail string, openIncident *models.Incident) (bool, string, error) {
 	// Maintain only one active incident per monitor; use the region-specific window for detection.
 	failureThreshold := int(monitor.FailureThreshold)
 	if failureThreshold <= 0 {
@@ -201,7 +229,7 @@ func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor 
 	}
 
 	window := int(math.Ceil(float64(failureThreshold) * 1.5))
-	recent, err := h.repo.ListRecentPingsByMonitorIDAndRegion(ctx, tx, monitor.ID, region, window-1)
+	recent, err := h.repo.ListRecentPingsByMonitorIDAndRegion(ctx, tx, monitor.ID, regionID, window-1)
 	if err != nil {
 		return false, "", err
 	}
@@ -210,7 +238,7 @@ func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor 
 	failureCount := countFailures(samples, window)
 
 	now := time.Now().UTC()
-	message := incidentMessage(region, detail, ping, string(ping.Status))
+	message := incidentMessage(strconv.FormatInt(regionID, 10), detail, ping, string(ping.Status))
 
 	// Create a new incident when the failure threshold is met.
 	if failureCount >= failureThreshold && len(samples) >= failureThreshold && openIncident == nil {
@@ -227,17 +255,16 @@ func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor 
 
 	// If an incident is already open, record meaningful changes in failure type.
 	if openIncident != nil {
-		lastEvent, err := h.repo.GetLastIncidentEvent(ctx, tx, openIncident.ID)
+		lastEvent, err := h.repo.GetLastEventTimeline(ctx, tx, openIncident.ID)
 		if err != nil {
 			return false, "", err
 		}
 
 		if lastEvent == nil || strings.TrimSpace(lastEvent.Message) != message {
-			if err := h.repo.CreateIncidentEvent(ctx, tx, models.IncidentEvent{
+			if err := h.repo.CreateEventTimeline(ctx, tx, models.EventTimeline{
 				IncidentID: openIncident.ID,
 				Message:    message,
 				EventType:  models.IncidentEventTypeUpdate,
-				Public:     true,
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}); err != nil {
@@ -249,7 +276,7 @@ func (h *Handler) handleIncidentFailure(ctx context.Context, tx pgx.Tx, monitor 
 	return false, "", nil
 }
 
-func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor models.Monitor, ping models.Ping, region, detail string, openIncident *models.Incident) (bool, string, error) {
+func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor models.Monitor, ping models.Ping, regionID int64, detail string, openIncident *models.Incident) (bool, string, error) {
 	// Nothing to do if no incident is open.
 	if openIncident == nil {
 		return false, "", nil
@@ -261,7 +288,7 @@ func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor
 	}
 
 	// Pull only enough recent pings (region-specific) to evaluate recovery, include current ping first.
-	recent, err := h.repo.ListRecentPingsByMonitorIDAndRegion(ctx, tx, monitor.ID, region, recoveryThreshold-1)
+	recent, err := h.repo.ListRecentPingsByMonitorIDAndRegion(ctx, tx, monitor.ID, regionID, recoveryThreshold-1)
 	if err != nil {
 		return false, "", err
 	}
@@ -284,17 +311,16 @@ func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor
 	}
 
 	now := time.Now().UTC()
-	message := incidentMessage(region, detail, ping, "recovered")
+	message := incidentMessage(strconv.FormatInt(regionID, 10), detail, ping, "recovered")
 
 	if err := h.repo.MarkIncidentResolved(ctx, tx, openIncident.ID, ping.Time, now); err != nil {
 		return false, "", err
 	}
 
-	if err := h.repo.CreateIncidentEvent(ctx, tx, models.IncidentEvent{
+	if err := h.repo.CreateEventTimeline(ctx, tx, models.EventTimeline{
 		IncidentID: openIncident.ID,
 		Message:    message,
 		EventType:  models.IncidentEventTypeAutoResolved,
-		Public:     true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
@@ -323,9 +349,15 @@ func countFailures(pings []models.Ping, window int) int {
 
 // createIncidentIfAbsent tries to create a new incident, handling unique constraint races gracefully.
 func (h *Handler) createIncidentIfAbsent(ctx context.Context, tx pgx.Tx, monitorID int64, startedAt time.Time, message string, now time.Time) (*models.Incident, bool, error) {
+	newID, err := id.GetID()
+	if err != nil {
+		return nil, false, err
+	}
+
 	incident := models.Incident{
-		MonitorID: monitorID,
+		ID:        newID,
 		Status:    models.IncidentStatusDetected,
+		IsPublic:  false,
 		StartedAt: startedAt,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -346,37 +378,31 @@ func (h *Handler) createIncidentIfAbsent(ctx context.Context, tx pgx.Tx, monitor
 		return nil, false, err
 	}
 
-	createdIncident, err := h.repo.GetOpenIncidentByMonitorID(ctx, tx, monitorID)
-	if err != nil {
+	if err := h.repo.CreateIncidentMonitor(ctx, tx, incident.ID, monitorID); err != nil {
 		return nil, false, err
 	}
-	if createdIncident == nil {
-		return nil, false, fmt.Errorf("incident created but not found")
-	}
 
-	if err := h.repo.CreateIncidentEvent(ctx, tx, models.IncidentEvent{
-		IncidentID: createdIncident.ID,
+	if err := h.repo.CreateEventTimeline(ctx, tx, models.EventTimeline{
+		IncidentID: incident.ID,
 		Message:    message,
 		EventType:  models.IncidentEventTypeDetected,
-		Public:     true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
 		return nil, false, err
 	}
 
-	if err := h.repo.CreateIncidentEvent(ctx, tx, models.IncidentEvent{
-		IncidentID: createdIncident.ID,
+	if err := h.repo.CreateEventTimeline(ctx, tx, models.EventTimeline{
+		IncidentID: incident.ID,
 		Message:    message,
 		EventType:  models.IncidentEventTypeNotificationSent,
-		Public:     true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
 		return nil, false, err
 	}
 
-	return createdIncident, true, nil
+	return &incident, true, nil
 }
 
 func incidentMessage(region, detail string, ping models.Ping, fallback string) string {

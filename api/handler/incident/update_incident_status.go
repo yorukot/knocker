@@ -27,7 +27,6 @@ type updateIncidentStatusRequest struct {
 // @Accept json
 // @Produce json
 // @Param teamID path string true "Team ID"
-// @Param monitorID path string true "Monitor ID"
 // @Param incidentID path string true "Incident ID"
 // @Param request body updateIncidentStatusRequest true "Incident status payload"
 // @Success 200 {object} response.SuccessResponse "Incident status updated successfully"
@@ -35,16 +34,11 @@ type updateIncidentStatusRequest struct {
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 404 {object} response.ErrorResponse "Incident not found"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /teams/{teamID}/monitors/{monitorID}/incidents/{incidentID}/status [post]
+// @Router /teams/{teamID}/incidents/{incidentID}/status [post]
 func (h *IncidentHandler) UpdateIncidentStatus(c echo.Context) error {
 	teamID, err := strconv.ParseInt(c.Param("teamID"), 10, 64)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid team ID")
-	}
-
-	monitorID, err := strconv.ParseInt(c.Param("monitorID"), 10, 64)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid monitor ID")
 	}
 
 	incidentID, err := strconv.ParseInt(c.Param("incidentID"), 10, 64)
@@ -89,17 +83,7 @@ func (h *IncidentHandler) UpdateIncidentStatus(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Incident not found")
 	}
 
-	monitor, err := h.Repo.GetMonitorByID(ctx, tx, teamID, monitorID)
-	if err != nil {
-		zap.L().Error("Failed to get monitor", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get monitor")
-	}
-
-	if monitor == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Incident not found")
-	}
-
-	existing, err := h.Repo.GetIncidentByID(ctx, tx, monitorID, incidentID)
+	existing, err := h.Repo.GetIncidentByIDForTeam(ctx, tx, teamID, incidentID)
 	if err != nil {
 		zap.L().Error("Failed to get incident", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get incident")
@@ -128,27 +112,21 @@ func (h *IncidentHandler) UpdateIncidentStatus(c echo.Context) error {
 
 	eventType := eventTypeFromStatus(req.Status)
 
-	public := true
-	if req.Public != nil {
-		public = *req.Public
-	}
-
 	msg := req.Message
 	if msg == "" {
 		msg = string(req.Status)
 	}
 
-	event := models.IncidentEvent{
+	event := models.EventTimeline{
 		IncidentID: updatedIncident.ID,
 		CreatedBy:  userID,
 		Message:    msg,
 		EventType:  eventType,
-		Public:     public,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
 
-	if err := h.Repo.CreateIncidentEvent(ctx, tx, event); err != nil {
+	if err := h.Repo.CreateEventTimeline(ctx, tx, event); err != nil {
 		zap.L().Error("Failed to record incident status event", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to record incident status event")
 	}
@@ -159,7 +137,7 @@ func (h *IncidentHandler) UpdateIncidentStatus(c echo.Context) error {
 
 	resp := struct {
 		Incident models.Incident      `json:"incident"`
-		Event    models.IncidentEvent `json:"event"`
+		Event    models.EventTimeline `json:"event"`
 	}{
 		Incident: *updatedIncident,
 		Event:    event,
@@ -168,7 +146,7 @@ func (h *IncidentHandler) UpdateIncidentStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, response.Success("Incident status updated successfully", resp))
 }
 
-func eventTypeFromStatus(status models.IncidentStatus) models.IncidentEventType {
+func eventTypeFromStatus(status models.IncidentStatus) models.EventType {
 	switch status {
 	case models.IncidentStatusResolved:
 		return models.IncidentEventTypeManuallyResolved

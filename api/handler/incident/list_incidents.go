@@ -11,27 +11,21 @@ import (
 )
 
 // ListIncidents godoc
-// @Summary List incidents for a monitor
-// @Description Lists incidents for a monitor the user has access to
+// @Summary List incidents for a team
+// @Description Lists incidents for a team the user has access to
 // @Tags incidents
 // @Produce json
 // @Param teamID path string true "Team ID"
-// @Param monitorID path string true "Monitor ID"
 // @Success 200 {object} response.SuccessResponse "Incidents retrieved successfully"
-// @Failure 400 {object} response.ErrorResponse "Invalid team or monitor ID"
+// @Failure 400 {object} response.ErrorResponse "Invalid team ID"
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
-// @Failure 404 {object} response.ErrorResponse "Monitor not found"
+// @Failure 404 {object} response.ErrorResponse "Team not found"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /teams/{teamID}/monitors/{monitorID}/incidents [get]
+// @Router /teams/{teamID}/incidents [get]
 func (h *IncidentHandler) ListIncidents(c echo.Context) error {
 	teamID, err := strconv.ParseInt(c.Param("teamID"), 10, 64)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid team ID")
-	}
-
-	monitorID, err := strconv.ParseInt(c.Param("monitorID"), 10, 64)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid monitor ID")
 	}
 
 	userID, err := authutil.GetUserIDFromContext(c)
@@ -60,20 +54,10 @@ func (h *IncidentHandler) ListIncidents(c echo.Context) error {
 	}
 
 	if member == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Monitor not found")
+		return echo.NewHTTPError(http.StatusNotFound, "Team not found")
 	}
 
-	monitor, err := h.Repo.GetMonitorByID(ctx, tx, teamID, monitorID)
-	if err != nil {
-		zap.L().Error("Failed to get monitor", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get monitor")
-	}
-
-	if monitor == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Monitor not found")
-	}
-
-	incidents, err := h.Repo.ListIncidentsByMonitorID(ctx, tx, monitorID)
+	incidents, err := h.Repo.ListIncidentsByTeamID(ctx, tx, teamID)
 	if err != nil {
 		zap.L().Error("Failed to list incidents", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list incidents")

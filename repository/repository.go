@@ -54,26 +54,38 @@ type Repository interface {
 	DeleteMonitor(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) error
 	ListMonitorsDueForCheck(ctx context.Context, tx pgx.Tx) ([]models.Monitor, error)
 	BatchUpdateMonitorsLastChecked(ctx context.Context, tx pgx.Tx, monitorIDs []int64, nextChecks []time.Time, lastChecked time.Time) error
+	ListRegionsByIDs(ctx context.Context, tx pgx.Tx, regionIDs []int64) ([]models.Region, error)
 
 	// Monitor-Notification junction table
 	CreateMonitorNotifications(ctx context.Context, tx pgx.Tx, monitorID int64, notificationIDs []int64) error
 	DeleteMonitorNotifications(ctx context.Context, tx pgx.Tx, monitorID int64) error
 	GetNotificationIDsByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) ([]int64, error)
 
+	// Monitor-Region junction table
+	CreateMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64, regions []models.Region) error
+	DeleteMonitorRegions(ctx context.Context, tx pgx.Tx, monitorID int64) error
+
 	// Pings
 	BatchInsertPings(ctx context.Context, tx pgx.Tx, pings []models.Ping) error
+
+	// Regions
+	ListAllRegions(ctx context.Context, tx pgx.Tx) ([]models.Region, error)
 
 	// Incidents
 	GetOpenIncidentByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) (*models.Incident, error)
 	CreateIncident(ctx context.Context, tx pgx.Tx, incident models.Incident) error
+	CreateIncidentMonitor(ctx context.Context, tx pgx.Tx, incidentID, monitorID int64) error
 	MarkIncidentResolved(ctx context.Context, tx pgx.Tx, incidentID int64, resolvedAt, updatedAt time.Time) error
-	CreateIncidentEvent(ctx context.Context, tx pgx.Tx, event models.IncidentEvent) error
-	GetLastIncidentEvent(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.IncidentEvent, error)
+	CreateEventTimeline(ctx context.Context, tx pgx.Tx, timeline models.EventTimeline) error
+	GetLastEventTimeline(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.EventTimeline, error)
 	ListIncidentsByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) ([]models.Incident, error)
+	ListIncidentsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Incident, error)
 	GetIncidentByID(ctx context.Context, tx pgx.Tx, monitorID, incidentID int64) (*models.Incident, error)
-	ListIncidentEventsByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.IncidentEvent, error)
+	GetIncidentByIDForTeam(ctx context.Context, tx pgx.Tx, teamID, incidentID int64) (*models.Incident, error)
+	ListEventTimelinesByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.EventTimeline, error)
 	UpdateIncidentStatus(ctx context.Context, tx pgx.Tx, incidentID int64, status models.IncidentStatus, resolvedAt *time.Time, updatedAt time.Time) (*models.Incident, error)
-	ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, region string, limit int) ([]models.Ping, error)
+	ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, regionID int64, limit int) ([]models.Ping, error)
+	UpdateMonitorStatus(ctx context.Context, tx pgx.Tx, monitorID int64, status models.MonitorStatus, updatedAt time.Time) error
 }
 
 // PGRepository is the production repository backed by pgx.

@@ -12,40 +12,46 @@ const (
 	IncidentStatusResolved      IncidentStatus = "resolved"
 )
 
-type IncidentEventType string
+type EventType string
 
 const (
-	IncidentEventTypeDetected         IncidentEventType = "detected"
-	IncidentEventTypeNotificationSent IncidentEventType = "notification_sent"
-	IncidentEventTypeManuallyResolved IncidentEventType = "manually_resolved"
-	IncidentEventTypeAutoResolved     IncidentEventType = "auto_resolved"
-	IncidentEventTypeUnpublished      IncidentEventType = "unpublished"
-	IncidentEventTypePublished        IncidentEventType = "published"
-	IncidentEventTypeInvestigating    IncidentEventType = "investigating"
-	IncidentEventTypeIdentified       IncidentEventType = "identified"
-	IncidentEventTypeUpdate           IncidentEventType = "update"
-	IncidentEventTypeMonitoring       IncidentEventType = "monitoring"
+	IncidentEventTypeDetected         EventType = "detected"
+	IncidentEventTypeNotificationSent EventType = "notification_sent"
+	IncidentEventTypeManuallyResolved EventType = "manually_resolved"
+	IncidentEventTypeAutoResolved     EventType = "auto_resolved"
+	IncidentEventTypeUnpublished      EventType = "unpublished"
+	IncidentEventTypePublished        EventType = "published"
+	IncidentEventTypeInvestigating    EventType = "investigating"
+	IncidentEventTypeIdentified       EventType = "identified"
+	IncidentEventTypeUpdate           EventType = "update"
+	IncidentEventTypeMonitoring       EventType = "monitoring"
 )
 
 // Incident represents an incident record in the database
 type Incident struct {
 	ID         int64          `json:"id,string" db:"id"`
-	MonitorID  int64          `json:"monitor_id,string" db:"monitor_id"`
 	Status     IncidentStatus `json:"status" db:"status"`
+	IsPublic   bool           `json:"is_public" db:"is_public"`
 	StartedAt  time.Time      `json:"started_at" db:"started_at"`
-	ResolvedAt *time.Time     `json:"resolved_at,omitempty" db:"resloved_at"` // Note: schema has typo "resloved_at"
+	ResolvedAt *time.Time     `json:"resolved_at,omitempty" db:"resolved_at"`
 	CreatedAt  time.Time      `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at" db:"updated_at"`
 }
 
-// IncidentEvent represents an incident event record in the database
-type IncidentEvent struct {
-	ID         int64             `json:"id,string" db:"id"`
-	IncidentID int64             `json:"incident_id,string" db:"incident_id"`
-	CreatedBy  *int64            `json:"created_by,omitempty" db:"created_by"`
-	Message    string            `json:"message" db:"message"`
-	EventType  IncidentEventType `json:"event_type" db:"event_type"`
-	Public     bool              `json:"public" db:"public"`
-	CreatedAt  time.Time         `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time         `json:"updated_at" db:"updated_at"`
+// IncidentMonitor links incidents to monitors.
+type IncidentMonitor struct {
+	ID         int64 `json:"id,string" db:"id"`
+	IncidentID int64 `json:"incident_id,string" db:"incident_id"`
+	MonitorID  int64 `json:"monitor_id,string" db:"monitor_id"`
+}
+
+// EventTimeline stores public or internal updates for an incident.
+type EventTimeline struct {
+	ID         int64     `json:"id,string" db:"id"`
+	IncidentID int64     `json:"incident_id,string" db:"event_id"`
+	CreatedBy  *int64    `json:"created_by,omitempty" db:"created_by"`
+	Message    string    `json:"message" db:"message"`
+	EventType  EventType `json:"event_type" db:"event_type"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }

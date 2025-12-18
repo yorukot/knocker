@@ -10,13 +10,13 @@ import (
 // MonitorPingPayload represents the payload for a monitor ping task
 type MonitorPingPayload struct {
 	Monitor models.Monitor `json:"monitor"`
-	Region  string         `json:"region"`
+	RegionID  int64         `json:"region"`
 }
 
-func NewMonitorPing(monitor models.Monitor, region string) (*asynq.Task, error) {
+func NewMonitorPing(monitor models.Monitor, regionID int64) (*asynq.Task, error) {
 	payload := MonitorPingPayload{
 		Monitor: monitor,
-		Region:  region,
+		RegionID:  regionID,
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -24,5 +24,5 @@ func NewMonitorPing(monitor models.Monitor, region string) (*asynq.Task, error) 
 		return nil, err
 	}
 
-	return asynq.NewTask(GetMonitorPingType(region), payloadBytes), nil
+	return asynq.NewTask(TypeMonitorPingPattern, payloadBytes), nil
 }

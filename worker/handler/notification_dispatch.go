@@ -8,6 +8,7 @@ import (
 	"github.com/hibiken/asynq"
 	notificationcore "github.com/yorukot/knocker/core/notification"
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/utils/config"
 	"github.com/yorukot/knocker/worker/tasks"
 	"go.uber.org/zap"
 )
@@ -44,13 +45,14 @@ func (h *Handler) HandleNotificationDispatch(ctx context.Context, t *asynq.Task)
 	}
 
 	detail := strings.TrimSpace(payload.Detail)
+	region := config.RegionByID(payload.RegionID)
 	title, description := notificationcore.FormatMessage(notificationcore.MessageInput{
-		MonitorName: monitor.Name,
-		Status:      payload.Ping.Status,
-		Region:      payload.Region,
-		LatencyMs:   payload.Ping.Latency,
-		CheckedAt:   payload.Ping.Time,
-		Detail:      detail,
+		MonitorName:       monitor.Name,
+		Status:            payload.Ping.Status,
+		RegionDisplayName: region.DisplayName,
+		LatencyMs:         payload.Ping.Latency,
+		CheckedAt:         payload.Ping.Time,
+		Detail:            detail,
 	})
 	if err := notificationcore.Send(ctx, *notification, title, description, payload.Ping.Status); err != nil {
 		zap.L().Error("failed to send notification",
@@ -65,7 +67,8 @@ func (h *Handler) HandleNotificationDispatch(ctx context.Context, t *asynq.Task)
 		zap.Int64("monitor_id", payload.MonitorID),
 		zap.Int64("notification_id", payload.NotificationID),
 		zap.String("notification_type", string(notification.Type)),
-		zap.String("region", payload.Region),
+		zap.Int64("region_id", payload.RegionID),
+		zap.String("region", region.Name),
 		zap.String("status", string(payload.Ping.Status)))
 
 	return nil

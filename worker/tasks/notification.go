@@ -12,7 +12,7 @@ type NotificationPayload struct {
 	TeamID         int64       `json:"team_id,string"`
 	MonitorID      int64       `json:"monitor_id,string"`
 	NotificationID int64       `json:"notification_id,string"`
-	Region         string      `json:"region"`
+	RegionID       int64       `json:"region_id,string"`
 	Ping           models.Ping `json:"ping"`
 	Detail         string      `json:"detail,omitempty"`
 }

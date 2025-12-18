@@ -9,16 +9,21 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/yorukot/knocker/models"
+	"github.com/yorukot/knocker/utils"
 	authutil "github.com/yorukot/knocker/utils/auth"
+	"github.com/yorukot/knocker/utils/id"
 	"github.com/yorukot/knocker/utils/response"
 	"go.uber.org/zap"
 )
 
+type monitorIDList = utils.IDList
+
 type createIncidentRequest struct {
-	Status    models.IncidentStatus `json:"status" validate:"omitempty,oneof=detected investigating identified monitoring resolved"`
-	Message   string                `json:"message" validate:"omitempty,min=1"`
-	StartedAt *time.Time            `json:"started_at,omitempty"`
-	Public    *bool                 `json:"public"`
+	Status     models.IncidentStatus `json:"status" validate:"omitempty,oneof=detected investigating identified monitoring resolved"`
+	Message    string                `json:"message" validate:"omitempty,min=1"`
+	StartedAt  *time.Time            `json:"started_at,omitempty"`
+	Public     *bool                 `json:"public"`
+	MonitorIDs monitorIDList         `json:"monitor_ids" validate:"required,min=1"`
 }
 
 // CreateIncident godoc
@@ -28,7 +33,6 @@ type createIncidentRequest struct {
 // @Accept json
 // @Produce json
 // @Param teamID path string true "Team ID"
-// @Param monitorID path string true "Monitor ID"
 // @Param request body createIncidentRequest true "Incident create payload"
 // @Success 200 {object} response.SuccessResponse "Incident created successfully"
 // @Failure 400 {object} response.ErrorResponse "Invalid request"
@@ -36,16 +40,11 @@ type createIncidentRequest struct {
 // @Failure 404 {object} response.ErrorResponse "Monitor not found"
 // @Failure 409 {object} response.ErrorResponse "An open incident already exists"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /teams/{teamID}/monitors/{monitorID}/incidents [post]
+// @Router /teams/{teamID}/incidents [post]
 func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 	teamID, err := strconv.ParseInt(c.Param("teamID"), 10, 64)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid team ID")
-	}
-
-	monitorID, err := strconv.ParseInt(c.Param("monitorID"), 10, 64)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid monitor ID")
 	}
 
 	var req createIncidentRequest
@@ -85,29 +84,40 @@ func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Monitor not found")
 	}
 
-	monitor, err := h.Repo.GetMonitorByID(ctx, tx, teamID, monitorID)
-	if err != nil {
-		zap.L().Error("Failed to get monitor", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get monitor")
+	monitorIDs := utils.UniqueInt64s(req.MonitorIDs.Int64s())
+	if len(monitorIDs) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "At least one monitor_id is required")
 	}
 
-	if monitor == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Monitor not found")
-	}
+	for _, mid := range monitorIDs {
+		monitor, err := h.Repo.GetMonitorByID(ctx, tx, teamID, mid)
+		if err != nil {
+			zap.L().Error("Failed to get monitor", zap.Error(err))
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get monitor")
+		}
+		if monitor == nil {
+			return echo.NewHTTPError(http.StatusNotFound, "Monitor not found")
+		}
 
-	openIncident, err := h.Repo.GetOpenIncidentByMonitorID(ctx, tx, monitorID)
-	if err != nil {
-		zap.L().Error("Failed to check open incidents", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to check open incidents")
-	}
+		openIncident, err := h.Repo.GetOpenIncidentByMonitorID(ctx, tx, mid)
+		if err != nil {
+			zap.L().Error("Failed to check open incidents", zap.Error(err))
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to check open incidents")
+		}
 
-	if openIncident != nil && openIncident.Status != models.IncidentStatusResolved {
-		return echo.NewHTTPError(http.StatusConflict, "An open incident already exists for this monitor")
+		if openIncident != nil && openIncident.Status != models.IncidentStatusResolved {
+			return echo.NewHTTPError(http.StatusConflict, "An open incident already exists for one of the monitors")
+		}
 	}
 
 	status := req.Status
 	if status == "" {
 		status = models.IncidentStatusDetected
+	}
+
+	isPublic := true
+	if req.Public != nil {
+		isPublic = *req.Public
 	}
 
 	now := time.Now().UTC()
@@ -121,9 +131,16 @@ func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 		resolvedAt = &now
 	}
 
+	incidentID, err := id.GetID()
+	if err != nil {
+		zap.L().Error("Failed to generate incident ID", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create incident")
+	}
+
 	incident := models.Incident{
-		MonitorID:  monitorID,
+		ID:         incidentID,
 		Status:     status,
+		IsPublic:   isPublic,
 		StartedAt:  *startedAt,
 		ResolvedAt: resolvedAt,
 		CreatedAt:  now,
@@ -135,19 +152,11 @@ func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create incident")
 	}
 
-	created, err := h.Repo.GetOpenIncidentByMonitorID(ctx, tx, monitorID)
-	if err != nil {
-		zap.L().Error("Failed to reload created incident", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load incident")
-	}
-
-	if created == nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Incident not found after creation")
-	}
-
-	public := true
-	if req.Public != nil {
-		public = *req.Public
+	for _, mid := range monitorIDs {
+		if err := h.Repo.CreateIncidentMonitor(ctx, tx, incident.ID, mid); err != nil {
+			zap.L().Error("Failed to link incident to monitor", zap.Error(err))
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to link incident to monitor")
+		}
 	}
 
 	msg := req.Message
@@ -155,17 +164,16 @@ func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 		msg = string(status)
 	}
 
-	event := models.IncidentEvent{
-		IncidentID: created.ID,
+	event := models.EventTimeline{
+		IncidentID: incidentID,
 		CreatedBy:  userID,
 		Message:    msg,
 		EventType:  eventTypeFromStatus(status),
-		Public:     public,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
 
-	if err := h.Repo.CreateIncidentEvent(ctx, tx, event); err != nil {
+	if err := h.Repo.CreateEventTimeline(ctx, tx, event); err != nil {
 		zap.L().Error("Failed to create incident event", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create incident event")
 	}
@@ -176,9 +184,9 @@ func (h *IncidentHandler) CreateIncident(c echo.Context) error {
 
 	resp := struct {
 		Incident models.Incident      `json:"incident"`
-		Event    models.IncidentEvent `json:"event"`
+		Event    models.EventTimeline `json:"event"`
 	}{
-		Incident: *created,
+		Incident: incident,
 		Event:    event,
 	}
 
