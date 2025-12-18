@@ -3,8 +3,8 @@ package models
 // Region represents an available monitoring region.
 type Region struct {
 	ID          int64  `json:"id,string" db:"id"`
-	Name        string `json:"name" db:"region_name"`
-	DisplayName string `json:"display_name" db:"region_display_name"`
+	Name        string `json:"name" db:"name"`
+	DisplayName string `json:"display_name" db:"display_name"`
 }
 
 // MonitorRegion links a monitor to a specific region with metadata.

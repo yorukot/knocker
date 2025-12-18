@@ -6,18 +6,21 @@ import type { HTTPMonitorConfig, PingMonitorConfig } from './monitor-config';
 import type { Incident } from './incident';
 
 export type MonitorType = 'http' | 'ping';
+export type MonitorStatus = 'up' | 'down';
 
 export interface Monitor {
 	id: string;
 	teamId: string;
 	name: string;
 	type: MonitorType;
-	config: HTTPMonitorConfig | PingMonitorConfig;
+	config: HTTPMonitorConfig | PingMonitorConfig | Record<string, unknown>;
 	interval: number;
+	status: MonitorStatus;
 	lastChecked: string;
 	nextCheck: string;
 	failureThreshold: number;
 	recoveryThreshold: number;
+	regions: string[];
 	notification: string[];
 	updatedAt: string;
 	createdAt: string;

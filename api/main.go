@@ -56,6 +56,7 @@ func routes(e *echo.Echo, repo repository.Repository) {
 	router.AuthRouter(api, repo)
 	router.UserRouter(api, repo)
 	router.TeamRouter(api, repo)
+	router.RegionRouter(api, repo)
 	router.NotificationRouter(api, repo)
 	router.MonitorRouter(api, repo)
 	router.IncidentRouter(api, repo)

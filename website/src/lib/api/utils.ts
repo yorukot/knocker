@@ -1,6 +1,8 @@
 import { PUBLIC_API_BASE } from '$env/static/public';
-import { refreshToken } from './auth';
+import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
 import camelcaseKeys from 'camelcase-keys';
+import { refreshToken } from './auth';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -18,6 +20,16 @@ type ApiOptions = {
 	defaultError?: string;
 	headers?: HeadersInit;
 };
+
+let redirectingToLogin = false;
+
+async function redirectToLogin() {
+	if (!browser || redirectingToLogin) return;
+
+	redirectingToLogin = true;
+	const next = window.location.pathname + window.location.search + window.location.hash;
+	await goto(`/auth/login?next=${encodeURIComponent(next)}`, { replaceState: true });
+}
 
 async function parseJson(res: Response): Promise<unknown> {
 	try {
@@ -57,12 +69,14 @@ export async function apiRequest<T>(url: string, options: ApiOptions = {}): Prom
 		const refreshed = await refreshToken();
 
 		if (!refreshed) {
+			await redirectToLogin();
 			throw new Error('AUTH_EXPIRED');
 		}
 
 		const retryRes = await fetch(`${PUBLIC_API_BASE}${url}`, requestInit);
 
 		if (!retryRes.ok) {
+			await redirectToLogin();
 			throw new Error('AUTH_EXPIRED');
 		}
 

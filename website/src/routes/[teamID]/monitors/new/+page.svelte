@@ -16,5 +16,5 @@
 			Back to list
 		</Button>
 	</div>
-	<NewMonitor notifications={data.notifications} />
+	<NewMonitor notifications={data.notifications} regions={data.regions} />
 </div>

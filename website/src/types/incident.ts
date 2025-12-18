@@ -9,6 +9,8 @@ export type IncidentStatus =
 	| 'monitoring'
 	| 'resolved';
 
+export type IncidentSeverity = 'emergency' | 'critical' | 'major' | 'minor' | 'info';
+
 export type IncidentEventType =
 	| 'detected'
 	| 'notification_sent'
@@ -23,21 +25,28 @@ export type IncidentEventType =
 
 export interface Incident {
 	id: string;
-	monitorId: string;
 	status: IncidentStatus;
+	severity: IncidentSeverity;
+	isPublic: boolean;
+	autoResolve: boolean;
 	startedAt: string;
 	resolvedAt?: string;
 	createdAt: string;
 	updatedAt: string;
 }
 
+export interface IncidentMonitor {
+	id: string;
+	incidentId: string;
+	monitorId: string;
+}
+
 export interface IncidentEvent {
 	id: string;
 	incidentId: string;
-	createdBy?: string;
+	createdBy?: string | null;
 	message: string;
 	eventType: IncidentEventType;
-	public: boolean;
 	createdAt: string;
 	updatedAt: string;
 }

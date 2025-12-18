@@ -10,14 +10,14 @@ export interface HTTPMonitorConfig {
 	url: string;
 	method: HTTPMethod;
 	maxRedirects: number;
-	requestTimeout: number;
+	requestTimeoutSeconds: number;
 	headers?: Record<string, string>;
-	bodyEncoding?: BodyEncoding;
+	bodyEncoding?: BodyEncoding | '';
 	body?: string;
 	upsideDownMode: boolean;
 	certificateExpiryNotification: boolean;
 	ignoreTlsError: boolean;
-	acceptedStatusCodes?: number[];
+	acceptedStatusCodes?: string[];
 }
 
 export interface PingMonitorConfig {

@@ -17,6 +17,7 @@ export type MonitorCreateRequest = {
 	interval: number;
 	failure_threshold: number;
 	recovery_threshold: number;
+	regions: string[];
 	notification: string[];
 	config:
 		| {

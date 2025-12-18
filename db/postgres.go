@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/yorukot/knocker/models"
 	"github.com/yorukot/knocker/utils/config"
+	"github.com/yorukot/knocker/utils/id"
 	"go.uber.org/zap"
 )
 
@@ -44,6 +48,11 @@ func InitDatabase() (*pgxpool.Pool, error) {
 	zap.L().Info("Database initialized")
 
 	Migrator()
+
+	if err := creteRegionsDataIfNotExists(ctx, pool); err != nil {
+		pool.Close()
+		return nil, err
+	}
 
 	return pool, nil
 }
@@ -85,4 +94,68 @@ func Migrator() {
 	}
 
 	zap.L().Info("Database migrated")
+}
+
+func creteRegionsDataIfNotExists(ctx context.Context, pool *pgxpool.Pool) error {
+
+	regions := make([]models.Region, 0, len(config.Env().AppRegions))
+	for _, raw := range config.Env().AppRegions {
+		parts := strings.SplitN(raw, "-", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid region format %q (expected CC-City)", raw)
+		}
+
+		countryCode := strings.TrimSpace(parts[0])
+		city := prettifyCity(strings.TrimSpace(parts[1]))
+
+		countryName, ok := countryNames[countryCode]
+		if !ok {
+			countryName = countryCode
+		}
+
+		displayName := fmt.Sprintf("%s, %s", countryName, city)
+		regionID, err := id.GetID()
+		if err != nil {
+			return fmt.Errorf("generate region id: %w", err)
+		}
+
+		regions = append(regions, models.Region{
+			ID:          regionID,
+			Name:        raw,
+			DisplayName: displayName,
+		})
+	}
+
+	for _, region := range regions {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO regions (id, name, display_name)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (name) DO NOTHING
+		`, region.ID, region.Name, region.DisplayName); err != nil {
+			return fmt.Errorf("insert region %q: %w", region.Name, err)
+		}
+	}
+
+	return nil
+}
+
+var camelCaseWordSplit = regexp.MustCompile(`([a-z])([A-Z])`)
+
+func prettifyCity(city string) string {
+	city = camelCaseWordSplit.ReplaceAllString(city, `$1 $2`)
+	return strings.TrimSpace(city)
+}
+
+var countryNames = map[string]string{
+	"TW": "Taiwan",
+	"US": "United States",
+	"UK": "United Kingdom",
+	"CA": "Canada",
+	"SG": "Singapore",
+	"JP": "Japan",
+	"KR": "South Korea",
+	"AU": "Australia",
+	"IN": "India",
+	"DE": "Germany",
+	"FR": "France",
 }

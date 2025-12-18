@@ -1,7 +1,7 @@
-package team
+package region
 
 import "github.com/yorukot/knocker/repository"
 
-type TeamHandler struct {
+type RegionHandler struct {
 	Repo repository.Repository
 }

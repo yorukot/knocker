@@ -10,13 +10,13 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
-	import type { Monitor, MonitorType } from '../../../../types';
-	import type { Notification } from '../../../../types';
+	import type { Monitor, MonitorType, Notification, Region } from '../../../../types';
 	import { Slider } from '$lib/components/ui/slider';
 	import * as Select from '$lib/components/ui/select';
 	import HttpMonitor from './http-monitor.svelte';
 	import PingMonitor from './ping-monitor.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { createMonitor, updateMonitor } from '$lib/api/monitor';
 	import { collapseStatusCodesToRanges, normalizeStatusCodes, parseHeaders } from './utils';
 	import { intervalOptions, monitorTypeSelectData, thresholdOptions, httpMethods } from './setting';
@@ -51,6 +51,7 @@
 		interval: z.coerce.number().int().min(10, 'Interval must be at least 10 seconds'),
 		failureThreshold: z.coerce.number().int().min(1).max(10),
 		recoveryThreshold: z.coerce.number().int().min(1).max(10),
+		regions: z.array(z.string()).min(1, 'Select at least one region'),
 		notification: z.array(z.string())
 	});
 
@@ -95,8 +96,13 @@
 
 	let {
 		notifications,
+		regions,
 		monitor = null
-	}: { notifications: Notification[]; monitor?: Monitor | null } = $props();
+	}: {
+		notifications?: Notification[] | null;
+		regions?: Region[] | null;
+		monitor?: Monitor | null;
+	} = $props();
 
 	const isEdit = $derived.by(() => monitor !== null);
 
@@ -113,10 +119,12 @@
 	let recoveryThresholdValue = $derived<string>(
 		(monitor?.recoveryThreshold ?? Number(initialRecoveryThreshold)).toString()
 	);
-	let selectedNotificationIds = $derived<string[]>(monitor?.notification ?? []);
+	let selectedNotificationIds = $state<string[]>(monitor?.notification ?? []);
+	let selectedRegionIds = $state<string[]>(monitor?.regions ?? []);
 
+	const safeNotifications = $derived(notifications ?? []);
 	const notificationOptions: MultiSelectOption[] = $derived.by(() =>
-		notifications.map((notification) => ({
+		safeNotifications.map((notification) => ({
 			label: notification.name,
 			value: notification.id,
 			keywords: [notification.type, notification.name],
@@ -131,36 +139,38 @@
 			.join('\n');
 	}
 
-	function initialHttpFromMonitor(config: Record<string, unknown> | undefined): HttpConfig {
+	function initialHttpFromMonitor(config: unknown): HttpConfig {
+		const cfg = (config ?? {}) as Record<string, unknown>;
 		return {
-			url: (config?.url as string) ?? '',
-			method: ((config?.method as HttpConfig['method']) ?? 'GET') as HttpConfig['method'],
-			maxRedirects: (config?.maxRedirects as number) ?? defaultHttpConfig().maxRedirects,
+			url: (cfg.url as string) ?? '',
+			method: ((cfg.method as HttpConfig['method']) ?? 'GET') as HttpConfig['method'],
+			maxRedirects: (cfg.max_redirects as number) ?? defaultHttpConfig().maxRedirects,
 			requestTimeoutSeconds:
-				(config?.requestTimeout as number) ?? defaultHttpConfig().requestTimeoutSeconds,
-			headers: toHeaderString(config?.headers as Record<string, string> | undefined),
-			bodyEncoding: (config?.bodyEncoding as HttpConfig['bodyEncoding']) ?? '',
-			body: (config?.body as string) ?? '',
+				(cfg.request_timeout as number) ?? defaultHttpConfig().requestTimeoutSeconds,
+			headers: toHeaderString(cfg.headers as Record<string, string> | undefined),
+			bodyEncoding: (cfg.body_encoding as HttpConfig['bodyEncoding']) ?? '',
+			body: (cfg.body as string) ?? '',
 			acceptedStatusCodes: (() => {
-				const raw = config?.acceptedStatusCodes as number[] | undefined;
+				const raw = cfg.accepted_status_codes as number[] | undefined;
 				if (raw && raw.length) {
 					return collapseStatusCodesToRanges(raw);
 				}
 				return defaultHttpConfig().acceptedStatusCodes;
 			})(),
-			upsideDownMode: (config?.upsideDownMode as boolean) ?? defaultHttpConfig().upsideDownMode,
+			upsideDownMode: (cfg.upside_down_mode as boolean) ?? defaultHttpConfig().upsideDownMode,
 			certificateExpiryNotification:
-				(config?.certificateExpiryNotification as boolean) ??
+				(cfg.certificate_expiry_notification as boolean) ??
 				defaultHttpConfig().certificateExpiryNotification,
-			ignoreTlsError: (config?.ignoreTlsError as boolean) ?? defaultHttpConfig().ignoreTlsError
+			ignoreTlsError: (cfg.ignore_tls_error as boolean) ?? defaultHttpConfig().ignoreTlsError
 		};
 	}
 
-	function initialPingFromMonitor(config: Record<string, unknown> | undefined): PingConfig {
+	function initialPingFromMonitor(config: unknown): PingConfig {
+		const cfg = (config ?? {}) as Record<string, unknown>;
 		return {
-			host: (config?.host as string) ?? '',
-			timeoutSeconds: (config?.timeoutSeconds as number) ?? defaultPingConfig().timeoutSeconds,
-			packetSize: (config?.packetSize as number) ?? defaultPingConfig().packetSize ?? ''
+			host: (cfg.host as string) ?? '',
+			timeoutSeconds: (cfg.timeout_seconds as number) ?? defaultPingConfig().timeoutSeconds,
+			packetSize: (cfg.packet_size as number) ?? defaultPingConfig().packetSize ?? ''
 		};
 	}
 
@@ -172,6 +182,7 @@
 				interval: intervalOptions[initialIntervalIndex].seconds,
 				failureThreshold: Number(initialFailureThreshold),
 				recoveryThreshold: Number(initialRecoveryThreshold),
+				regions: [] as string[],
 				notification: [] as string[],
 				config: defaultHttpConfig()
 			};
@@ -183,19 +194,20 @@
 			interval: monitor.interval,
 			failureThreshold: monitor.failureThreshold,
 			recoveryThreshold: monitor.recoveryThreshold,
+			regions: monitor.regions,
 			notification: monitor.notification
 		};
 
 		if (monitor.type === 'http') {
 			return {
 				...base,
-				config: initialHttpFromMonitor(monitor.config as Record<string, unknown>)
+				config: initialHttpFromMonitor(monitor.config)
 			};
 		}
 
 		return {
 			...base,
-			config: initialPingFromMonitor(monitor.config as Record<string, unknown>)
+			config: initialPingFromMonitor(monitor.config)
 		};
 	})();
 
@@ -233,6 +245,7 @@
 			interval: values.interval,
 			failure_threshold: values.failureThreshold,
 			recovery_threshold: values.recoveryThreshold,
+			regions: values.regions,
 			notification: values.notification
 		};
 
@@ -292,12 +305,23 @@
 		setFields('notification', selectedNotificationIds);
 	});
 
+	$effect(() => {
+		setFields('regions', selectedRegionIds);
+	});
+
 	function handleTypeChange(next: MonitorType) {
 		selectedMonitorType = next;
 		setFields('type', next);
 		const configValue: MonitorFormValues['config'] =
 			next === 'http' ? defaultHttpConfig() : defaultPingConfig();
 		setFields('config', configValue);
+	}
+
+	function toggleRegion(regionId: string) {
+		selectedRegionIds = selectedRegionIds.includes(regionId)
+			? selectedRegionIds.filter((id) => id !== regionId)
+			: [...selectedRegionIds, regionId];
+		setFields('regions', selectedRegionIds);
 	}
 
 	const failureThresholdLabel = $derived.by(() => {
@@ -452,6 +476,33 @@
 							</Field.Description>
 						{/if}
 					</div>
+				</div>
+
+				<div class="space-y-2">
+					<Field.Label>Regions</Field.Label>
+					<Field.Description>Select at least one region to run checks from.</Field.Description>
+					<div class="grid gap-2 sm:grid-cols-2">
+						{#each regions as region (region.id)}
+							<button
+								type="button"
+								class="flex items-start gap-3 rounded-md border px-3 py-2 text-left transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+								onclick={() => toggleRegion(region.id)}
+							>
+								<Checkbox checked={selectedRegionIds.includes(region.id)} class="mt-1" />
+								<div class="space-y-0.5">
+									<Field.Title>{region.displayName ?? region.name}</Field.Title>
+									<Field.Description class="text-xs text-muted-foreground">
+										{region.name}
+									</Field.Description>
+								</div>
+							</button>
+						{/each}
+					</div>
+					{#if $errors.regions}
+						<Field.Description class="text-destructive">
+							{$errors.regions[0]}
+						</Field.Description>
+					{/if}
 				</div>
 
 				<div class="space-y-2">

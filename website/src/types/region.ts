@@ -1,13 +1,15 @@
 // ============================================================================
-// Ping Types
+// Region Types
 // ============================================================================
 
-export type PingStatus = 'successful' | 'failed' | 'timeout';
+export interface Region {
+	id: string;
+	name: string;
+	displayName: string;
+}
 
-export interface Ping {
-	time: string;
+export interface MonitorRegion {
+	id: string;
 	monitorId: string;
 	regionId: string;
-	latency: number;
-	status: PingStatus;
 }

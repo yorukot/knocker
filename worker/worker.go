@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,12 +22,13 @@ func Run(db *pgxpool.Pool) {
 		Addr:     redisAddr,
 		Password: cfg.RedisPassword,
 	}
+	regionIDString := strconv.FormatInt(config.RegionByName(cfg.AppRegion).ID, 10)
 
 	queues := map[string]int{
 		// Consume only the regional queue for monitor pings plus default for shared tasks (e.g., notifications).
-		"critical":    1,
-		cfg.AppRegion: 6,
-		"default":     3,
+		"critical":     1,
+		regionIDString: 6,
+		"default":      3,
 	}
 
 	srv := asynq.NewServer(
