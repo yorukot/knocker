@@ -86,6 +86,28 @@ export function updateIncidentStatus(
 	});
 }
 
+export type IncidentUpdateRequest = {
+	public?: boolean;
+	auto_resolve?: boolean;
+};
+
+export type IncidentUpdateResponse = {
+	message: string;
+	data: Incident;
+};
+
+export function updateIncident(
+	teamID: string,
+	incidentID: string,
+	payload: IncidentUpdateRequest
+): Promise<IncidentUpdateResponse> {
+	return apiRequest<IncidentUpdateResponse>(`/teams/${teamID}/incidents/${incidentID}`, {
+		method: 'PATCH',
+		body: payload,
+		defaultError: 'Failed to update incident'
+	});
+}
+
 export type IncidentCreateRequest = {
 	status?: Incident['status'];
 	severity?: Incident['severity'];

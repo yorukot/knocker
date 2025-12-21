@@ -249,11 +249,33 @@ func (r *PGRepository) UpdateIncidentStatus(ctx context.Context, tx pgx.Tx, inci
 		    resolved_at = $3,
 		    updated_at = $4
 		WHERE id = $1
-		RETURNING id, status, is_public, started_at, resolved_at, created_at, updated_at
+		RETURNING id, status, severity, is_public, auto_resolve, started_at, resolved_at, created_at, updated_at
 	`
 
 	var incident models.Incident
 	if err := pgxscan.Get(ctx, tx, &incident, query, incidentID, status, resolvedAt, updatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &incident, nil
+}
+
+// UpdateIncidentSettings updates visibility/auto-resolve flags for an incident.
+func (r *PGRepository) UpdateIncidentSettings(ctx context.Context, tx pgx.Tx, incidentID int64, isPublic bool, autoResolve bool, updatedAt time.Time) (*models.Incident, error) {
+	const query = `
+		UPDATE incidents
+		SET is_public = $2,
+		    auto_resolve = $3,
+		    updated_at = $4
+		WHERE id = $1
+		RETURNING id, status, severity, is_public, auto_resolve, started_at, resolved_at, created_at, updated_at
+	`
+
+	var incident models.Incident
+	if err := pgxscan.Get(ctx, tx, &incident, query, incidentID, isPublic, autoResolve, updatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}

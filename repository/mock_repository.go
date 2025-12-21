@@ -339,6 +339,12 @@ func (m *MockRepository) UpdateIncidentStatus(ctx context.Context, tx pgx.Tx, in
 	return incident, args.Error(1)
 }
 
+func (m *MockRepository) UpdateIncidentSettings(ctx context.Context, tx pgx.Tx, incidentID int64, isPublic bool, autoResolve bool, updatedAt time.Time) (*models.Incident, error) {
+	args := m.Called(ctx, tx, incidentID, isPublic, autoResolve, updatedAt)
+	incident, _ := args.Get(0).(*models.Incident)
+	return incident, args.Error(1)
+}
+
 func (m *MockRepository) ListRecentPingsByMonitorIDAndRegion(ctx context.Context, tx pgx.Tx, monitorID int64, regionID int64, limit int) ([]models.Ping, error) {
 	args := m.Called(ctx, tx, monitorID, regionID, limit)
 	pings, _ := args.Get(0).([]models.Ping)

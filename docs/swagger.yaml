@@ -93,6 +93,13 @@ definitions:
     required:
     - monitor_ids
     type: object
+  incident.updateIncidentRequest:
+    properties:
+      auto_resolve:
+        type: boolean
+      public:
+        type: boolean
+    type: object
   incident.updateIncidentStatusRequest:
     properties:
       message:
@@ -815,6 +822,53 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Get an incident
+      tags:
+      - incidents
+    patch:
+      consumes:
+      - application/json
+      description: Updates an incident's visibility and auto-resolve settings
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      - description: Incident update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/incident.updateIncidentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incident updated successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Update incident settings
       tags:
       - incidents
   /teams/{teamID}/incidents/{incidentID}/events:

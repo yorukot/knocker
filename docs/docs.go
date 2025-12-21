@@ -761,6 +761,76 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "description": "Updates an incident's visibility and auto-resolve settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "incidents"
+                ],
+                "summary": "Update incident settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Incident ID",
+                        "name": "incidentID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Incident update payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/incident.updateIncidentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Incident updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Incident not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/teams/{teamID}/incidents/{incidentID}/events": {
@@ -2083,6 +2153,17 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.IncidentStatus"
                         }
                     ]
+                }
+            }
+        },
+        "incident.updateIncidentRequest": {
+            "type": "object",
+            "properties": {
+                "auto_resolve": {
+                    "type": "boolean"
+                },
+                "public": {
+                    "type": "boolean"
                 }
             }
         },

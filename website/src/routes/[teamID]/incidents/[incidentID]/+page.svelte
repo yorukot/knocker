@@ -6,8 +6,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import * as Select from '$lib/components/ui/select';
+	import { Switch } from '$lib/components/ui/switch';
 	import Textarea from '$lib/components/ui/textarea/textarea.svelte';
-	import { createIncidentEvent, updateIncidentStatus } from '$lib/api/incident';
+	import { createIncidentEvent, updateIncident, updateIncidentStatus } from '$lib/api/incident';
 	import { toast } from 'svelte-sonner';
 
 	import type { Incident, IncidentEvent, IncidentEventType } from '../../../../types';
@@ -21,6 +22,10 @@
 
 	let status = $state<Incident['status']>(data.incident.status);
 	let statusMessage = $state('');
+
+	let isPublic = $state(data.incident.isPublic);
+	let autoResolve = $state(data.incident.autoResolve);
+	let isSubmittingSettings = $state(false);
 
 	let eventType = $state<IncidentEventType>('update');
 	let eventMessage = $state('');
@@ -162,6 +167,8 @@
 
 			incident = res.data.incident;
 			status = res.data.incident.status;
+			isPublic = res.data.incident.isPublic;
+			autoResolve = res.data.incident.autoResolve;
 			events = [res.data.event, ...events];
 			statusMessage = '';
 			toast.success('Incident status updated');
@@ -205,6 +212,35 @@
 			toast.error(message);
 		} finally {
 			isSubmittingEvent = false;
+		}
+	}
+
+	async function handleSettingsSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		if (isSubmittingSettings) return;
+
+		const teamID = page.params.teamID;
+		if (!teamID) {
+			toast.error('Missing team id in route');
+			return;
+		}
+
+		isSubmittingSettings = true;
+		try {
+			const res = await updateIncident(teamID, incident.id, {
+				public: isPublic,
+				auto_resolve: autoResolve
+			});
+
+			incident = res.data;
+			isPublic = res.data.isPublic;
+			autoResolve = res.data.autoResolve;
+			toast.success('Incident settings updated');
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Failed to update incident settings.';
+			toast.error(message);
+		} finally {
+			isSubmittingSettings = false;
 		}
 	}
 </script>
@@ -361,6 +397,46 @@
 									Updating…
 								{:else}
 									Update status
+								{/if}
+							</Button>
+						</div>
+					</form>
+				</Card.Content>
+			</Card.Root>
+
+			<Card.Root class="p-6">
+				<Card.Header class="p-0">
+					<Card.Title class="text-lg">Visibility & automation</Card.Title>
+					<Card.Description>Control whether the incident is public and auto-resolves.</Card.Description>
+				</Card.Header>
+				<Card.Content class="p-0">
+					<form class="space-y-4" onsubmit={handleSettingsSubmit}>
+						<div class="flex flex-col gap-3">
+							<div class="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+								<div>
+									<p class="text-sm font-medium">Public incident</p>
+									<p class="text-xs text-muted-foreground">Show this incident on the status page.</p>
+								</div>
+								<Switch bind:checked={isPublic} />
+							</div>
+
+							<div class="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+								<div>
+									<p class="text-sm font-medium">Auto-resolve</p>
+									<p class="text-xs text-muted-foreground">
+										Resolve automatically when monitors recover.
+									</p>
+								</div>
+								<Switch bind:checked={autoResolve} />
+							</div>
+						</div>
+
+						<div class="flex justify-end">
+							<Button type="submit" disabled={isSubmittingSettings}>
+								{#if isSubmittingSettings}
+									Saving…
+								{:else}
+									Save settings
 								{/if}
 							</Button>
 						</div>
