@@ -1,212 +1,221 @@
 <script lang="ts">
 	import * as Chart from '$lib/components/ui/chart/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
+	import ChartContainer from '$lib/components/ui/chart/chart-container.svelte';
 	import { scaleUtc } from 'd3-scale';
 	import { Area, AreaChart, ChartClipPath } from 'layerchart';
-	import { curveNatural } from 'd3-shape';
-	import ChartContainer from '$lib/components/ui/chart/chart-container.svelte';
+	import { curveLinear } from "d3-shape";
 	import { cubicInOut } from 'svelte/easing';
+	import { SvelteMap } from 'svelte/reactivity';
+	import type { MonitorAnalytics, Region } from '../../../../types';
+	import { regionFlagEmoji } from '$lib/utils/region';
 
-	const chartData = [
-		{ date: new Date('2024-04-01'), desktop: 222, mobile: 150 },
-		{ date: new Date('2024-04-02'), desktop: 97, mobile: 180 },
-		{ date: new Date('2024-04-03'), desktop: 167, mobile: 120 },
-		{ date: new Date('2024-04-04'), desktop: 242, mobile: 260 },
-		{ date: new Date('2024-04-05'), desktop: 373, mobile: 290 },
-		{ date: new Date('2024-04-06'), desktop: 301, mobile: 340 },
-		{ date: new Date('2024-04-07'), desktop: 245, mobile: 180 },
-		{ date: new Date('2024-04-08'), desktop: 409, mobile: 320 },
-		{ date: new Date('2024-04-09'), desktop: 59, mobile: 110 },
-		{ date: new Date('2024-04-10'), desktop: 261, mobile: 190 },
-		{ date: new Date('2024-04-11'), desktop: 327, mobile: 350 },
-		{ date: new Date('2024-04-12'), desktop: 292, mobile: 210 },
-		{ date: new Date('2024-04-13'), desktop: 342, mobile: 380 },
-		{ date: new Date('2024-04-14'), desktop: 137, mobile: 220 },
-		{ date: new Date('2024-04-15'), desktop: 120, mobile: 170 },
-		{ date: new Date('2024-04-16'), desktop: 138, mobile: 190 },
-		{ date: new Date('2024-04-17'), desktop: 446, mobile: 360 },
-		{ date: new Date('2024-04-18'), desktop: 364, mobile: 410 },
-		{ date: new Date('2024-04-19'), desktop: 243, mobile: 180 },
-		{ date: new Date('2024-04-20'), desktop: 89, mobile: 150 },
-		{ date: new Date('2024-04-21'), desktop: 137, mobile: 200 },
-		{ date: new Date('2024-04-22'), desktop: 224, mobile: 170 },
-		{ date: new Date('2024-04-23'), desktop: 138, mobile: 230 },
-		{ date: new Date('2024-04-24'), desktop: 387, mobile: 290 },
-		{ date: new Date('2024-04-25'), desktop: 215, mobile: 250 },
-		{ date: new Date('2024-04-26'), desktop: 75, mobile: 130 },
-		{ date: new Date('2024-04-27'), desktop: 383, mobile: 420 },
-		{ date: new Date('2024-04-28'), desktop: 122, mobile: 180 },
-		{ date: new Date('2024-04-29'), desktop: 315, mobile: 240 },
-		{ date: new Date('2024-04-30'), desktop: 454, mobile: 380 },
-		{ date: new Date('2024-05-01'), desktop: 165, mobile: 220 },
-		{ date: new Date('2024-05-02'), desktop: 293, mobile: 310 },
-		{ date: new Date('2024-05-03'), desktop: 247, mobile: 190 },
-		{ date: new Date('2024-05-04'), desktop: 385, mobile: 420 },
-		{ date: new Date('2024-05-05'), desktop: 481, mobile: 390 },
-		{ date: new Date('2024-05-06'), desktop: 498, mobile: 520 },
-		{ date: new Date('2024-05-07'), desktop: 388, mobile: 300 },
-		{ date: new Date('2024-05-08'), desktop: 149, mobile: 210 },
-		{ date: new Date('2024-05-09'), desktop: 227, mobile: 180 },
-		{ date: new Date('2024-05-10'), desktop: 293, mobile: 330 },
-		{ date: new Date('2024-05-11'), desktop: 335, mobile: 270 },
-		{ date: new Date('2024-05-12'), desktop: 197, mobile: 240 },
-		{ date: new Date('2024-05-13'), desktop: 197, mobile: 160 },
-		{ date: new Date('2024-05-14'), desktop: 448, mobile: 490 },
-		{ date: new Date('2024-05-15'), desktop: 473, mobile: 380 },
-		{ date: new Date('2024-05-16'), desktop: 338, mobile: 400 },
-		{ date: new Date('2024-05-17'), desktop: 499, mobile: 420 },
-		{ date: new Date('2024-05-18'), desktop: 315, mobile: 350 },
-		{ date: new Date('2024-05-19'), desktop: 235, mobile: 180 },
-		{ date: new Date('2024-05-20'), desktop: 177, mobile: 230 },
-		{ date: new Date('2024-05-21'), desktop: 82, mobile: 140 },
-		{ date: new Date('2024-05-22'), desktop: 81, mobile: 120 },
-		{ date: new Date('2024-05-23'), desktop: 252, mobile: 290 },
-		{ date: new Date('2024-05-24'), desktop: 294, mobile: 220 },
-		{ date: new Date('2024-05-25'), desktop: 201, mobile: 250 },
-		{ date: new Date('2024-05-26'), desktop: 213, mobile: 170 },
-		{ date: new Date('2024-05-27'), desktop: 420, mobile: 460 },
-		{ date: new Date('2024-05-28'), desktop: 233, mobile: 190 },
-		{ date: new Date('2024-05-29'), desktop: 78, mobile: 130 },
-		{ date: new Date('2024-05-30'), desktop: 340, mobile: 280 },
-		{ date: new Date('2024-05-31'), desktop: 178, mobile: 230 },
-		{ date: new Date('2024-06-01'), desktop: 178, mobile: 200 },
-		{ date: new Date('2024-06-02'), desktop: 470, mobile: 410 },
-		{ date: new Date('2024-06-03'), desktop: 103, mobile: 160 },
-		{ date: new Date('2024-06-04'), desktop: 439, mobile: 380 },
-		{ date: new Date('2024-06-05'), desktop: 88, mobile: 140 },
-		{ date: new Date('2024-06-06'), desktop: 294, mobile: 250 },
-		{ date: new Date('2024-06-07'), desktop: 323, mobile: 370 },
-		{ date: new Date('2024-06-08'), desktop: 385, mobile: 320 },
-		{ date: new Date('2024-06-09'), desktop: 438, mobile: 480 },
-		{ date: new Date('2024-06-10'), desktop: 155, mobile: 200 },
-		{ date: new Date('2024-06-11'), desktop: 92, mobile: 150 },
-		{ date: new Date('2024-06-12'), desktop: 492, mobile: 420 },
-		{ date: new Date('2024-06-13'), desktop: 81, mobile: 130 },
-		{ date: new Date('2024-06-14'), desktop: 426, mobile: 380 },
-		{ date: new Date('2024-06-15'), desktop: 307, mobile: 350 },
-		{ date: new Date('2024-06-16'), desktop: 371, mobile: 310 },
-		{ date: new Date('2024-06-17'), desktop: 475, mobile: 520 },
-		{ date: new Date('2024-06-18'), desktop: 107, mobile: 170 },
-		{ date: new Date('2024-06-19'), desktop: 341, mobile: 290 },
-		{ date: new Date('2024-06-20'), desktop: 408, mobile: 450 },
-		{ date: new Date('2024-06-21'), desktop: 169, mobile: 210 },
-		{ date: new Date('2024-06-22'), desktop: 317, mobile: 270 },
-		{ date: new Date('2024-06-23'), desktop: 480, mobile: 530 },
-		{ date: new Date('2024-06-24'), desktop: 132, mobile: 180 },
-		{ date: new Date('2024-06-25'), desktop: 141, mobile: 190 },
-		{ date: new Date('2024-06-26'), desktop: 434, mobile: 380 },
-		{ date: new Date('2024-06-27'), desktop: 448, mobile: 490 },
-		{ date: new Date('2024-06-28'), desktop: 149, mobile: 200 },
-		{ date: new Date('2024-06-29'), desktop: 103, mobile: 160 },
-		{ date: new Date('2024-06-30'), desktop: 446, mobile: 400 }
+	type PercentileKey = 'p50Ms' | 'p75Ms' | 'p90Ms' | 'p95Ms' | 'p99Ms';
+
+	type ChartPoint = {
+		date: Date;
+		latency: number;
+	} & Record<string, number | Date>;
+
+	type Props = {
+		analytics: MonitorAnalytics;
+		regions: Region[];
+	};
+
+	const chartColors = [
+		'var(--chart-1)',
+		'var(--chart-2)',
+		'var(--chart-3)',
+		'var(--chart-4)',
+		'var(--chart-5)'
 	];
 
-	let timeRange = $state('90d');
+	const percentileOptions: { value: PercentileKey; label: string }[] = [
+		{ value: 'p50Ms', label: 'P50' },
+		{ value: 'p75Ms', label: 'P75' },
+		{ value: 'p90Ms', label: 'P90' },
+		{ value: 'p95Ms', label: 'P95' },
+		{ value: 'p99Ms', label: 'P99' }
+	];
 
-	const selectedLabel = $derived.by(() => {
-		switch (timeRange) {
-			case '90d':
-				return 'Last 3 months';
-			case '30d':
-				return 'Last 30 days';
-			case '7d':
-				return 'Last 7 days';
-			default:
-				return 'Last 3 months';
+	let { analytics, regions }: Props = $props();
+
+	let percentile: PercentileKey = $state('p95Ms');
+
+	const percentileLabel = $derived(
+		percentileOptions.find((option) => option.value === percentile)?.label ?? 'P95'
+	);
+
+	const regionIds = $derived.by(() => (analytics?.regions ?? []).map((region) => region.regionId));
+
+	const regionNameMap = $derived.by(() => {
+		const map = new SvelteMap<string, string>();
+
+		for (const region of regions) {
+			map.set(region.id, region.displayName);
 		}
+
+		return map;
 	});
 
-	const filteredData = $derived(
-		chartData.filter((item) => {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity
-			const referenceDate = new Date('2024-06-30');
-			let daysToSubtract = 90;
-			if (timeRange === '30d') {
-				daysToSubtract = 30;
-			} else if (timeRange === '7d') {
-				daysToSubtract = 7;
-			}
+	const regionById = $derived.by(() => {
+		const map = new SvelteMap<string, Region>();
+		for (const region of regions) {
+			map.set(region.id, region);
+		}
+		return map;
+	});
 
-			referenceDate.setDate(referenceDate.getDate() - daysToSubtract);
-			return item.date >= referenceDate;
+	const chartConfig = $derived.by(() =>
+		regionIds.reduce((config, regionId, index) => {
+			const color = chartColors[index % chartColors.length];
+			const region = regionById.get(regionId);
+			const flag = region ? regionFlagEmoji(region) : null;
+
+			config[regionId] = {
+				label: `${flag ?? ''}${flag ? ' ' : ''}${regionNameMap.get(regionId) ?? regionId}`,
+				color
+			};
+			return config;
+		}, {} as Chart.ChartConfig)
+	);
+
+	const chartSeries = $derived.by(() =>
+		regionIds.map((regionId, index) => {
+			const region = regionById.get(regionId);
+			const flag = region ? regionFlagEmoji(region) : null;
+
+			return {
+				key: regionId,
+				label: `${flag ?? ''}${flag ? ' ' : ''}${regionNameMap.get(regionId) ?? regionId}`,
+				color: chartColors[index % chartColors.length]
+			};
 		})
 	);
 
-	const chartConfig = {
-		desktop: { label: 'Desktop', color: 'var(--chart-1)' },
-		mobile: { label: 'Mobile', color: 'var(--chart-2)' }
-	} satisfies Chart.ChartConfig;
+	const latencySeries = $derived.by(() => buildLatencySeries(analytics, percentile));
+
+	const xAxisTicks = $derived.by(() => {
+		const dates = latencySeries.map((p) => p.date);
+		if (dates.length === 0) return [];
+		if (dates.length === 1) return [dates[0]];
+		return [dates[0], dates[dates.length - 1]];
+	});
+
+	function buildLatencySeries(data: MonitorAnalytics, pKey: PercentileKey): ChartPoint[] {
+		if (!data?.series?.length) return [];
+
+		const buckets = new SvelteMap<
+			number,
+			SvelteMap<
+				string,
+				{
+					sum: number;
+					weight: number;
+				}
+			>
+		>();
+
+		for (const point of data.series) {
+			const timestamp = parseTimestamp(point.timestamp);
+			const latency = point[pKey];
+			if (timestamp === undefined || !Number.isFinite(latency)) continue;
+
+			const weight = point.totalCount > 0 ? point.totalCount : 1;
+			const regions = buckets.get(timestamp) ?? new SvelteMap();
+			const bucket = regions.get(point.regionId) ?? { sum: 0, weight: 0 };
+
+			bucket.sum += latency * weight;
+			bucket.weight += weight;
+			regions.set(point.regionId, bucket);
+			buckets.set(timestamp, regions);
+		}
+
+		return Array.from(buckets.entries())
+			.sort((a, b) => a[0] - b[0])
+			.map(([timestamp, regionMap]) => {
+				const entry: ChartPoint = {
+					date: new Date(timestamp),
+					latency: 0
+				};
+
+				for (const [regionId, bucket] of regionMap.entries()) {
+					entry[regionId] = bucket.weight > 0 ? bucket.sum / bucket.weight : 0;
+				}
+
+				return entry;
+			});
+	}
+
+	function parseTimestamp(value?: string): number | undefined {
+		if (!value) return undefined;
+		const time = new Date(value).getTime();
+		return Number.isNaN(time) ? undefined : time;
+	}
+
+	function formatWindowRange(window?: { start?: string; end?: string }): string {
+		if (!window?.start || !window?.end) return 'Latency over time';
+		const start = new Date(window.start);
+		const end = new Date(window.end);
+		if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Latency over time';
+
+		const formatter = new Intl.DateTimeFormat('en', {
+			month: 'short',
+			day: 'numeric'
+		});
+
+		return `${formatter.format(start)} - ${formatter.format(end)}`;
+	}
 </script>
 
-<Card.Root>
-	<Card.Header class="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
-		<div class="grid flex-1 gap-1 text-center sm:text-start">
-			<Card.Title>Area Chart - Interactive</Card.Title>
-			<Card.Description>Showing total visitors for the last 3 months</Card.Description>
+<div class="space-y-4">
+	<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+		<div class="flex gap-2 items-baseline">
+			<h1 class="text-2xl font-bold">Latency</h1>
+
+			<span class="text-sm text-foreground/50">{formatWindowRange(analytics.window)}</span>
 		</div>
-		<Select.Root type="single" bind:value={timeRange}>
-			<Select.Trigger class="w-40 rounded-lg sm:ms-auto" aria-label="Select a value">
-				{selectedLabel}
+		<Select.Root type="single" bind:value={percentile}>
+			<Select.Trigger class="w-28 rounded-lg sm:ms-auto" aria-label="Select percentile">
+				{percentileLabel}
 			</Select.Trigger>
 			<Select.Content class="rounded-xl">
-				<Select.Item value="90d" class="rounded-lg">Last 3 months</Select.Item>
-				<Select.Item value="30d" class="rounded-lg">Last 30 days</Select.Item>
-				<Select.Item value="7d" class="rounded-lg">Last 7 days</Select.Item>
+				{#each percentileOptions as option (option.value)}
+					<Select.Item value={option.value} class="rounded-lg">
+						{option.label}
+					</Select.Item>
+				{/each}
 			</Select.Content>
 		</Select.Root>
-	</Card.Header>
-	<Card.Content>
-		<ChartContainer config={chartConfig} class="-ml-3 aspect-auto h-[250px] w-full">
+	</div>
+	<div class="m-5">
+		<ChartContainer config={chartConfig} class="aspect-auto h-[250px] w-full">
 			<AreaChart
 				legend
-				data={filteredData}
+				data={latencySeries}
 				x="date"
 				xScale={scaleUtc()}
-				series={[
-					{
-						key: 'mobile',
-						label: 'Mobile',
-						color: chartConfig.mobile.color
-					},
-					{
-						key: 'desktop',
-						label: 'Desktop',
-						color: chartConfig.desktop.color
-					}
-				]}
-				seriesLayout="stack"
+				series={chartSeries}
+				seriesLayout="overlap"
 				props={{
 					area: {
-						curve: curveNatural,
+						curve: curveLinear,
 						'fill-opacity': 0.4,
 						line: { class: 'stroke-1' },
 						motion: 'tween'
 					},
 					xAxis: {
-						ticks: timeRange === '7d' ? 7 : undefined,
-						format: (v) => {
-							return v.toLocaleDateString('en-US', {
-								month: 'short',
-								day: 'numeric'
-							});
-						}
+						ticks: xAxisTicks,
+						format: (value) =>
+							new Intl.DateTimeFormat('en', {
+								hour: '2-digit',
+								minute: '2-digit'
+							}).format(value as Date)
 					},
-
 					yAxis: { format: () => '' }
 				}}
 			>
 				{#snippet marks({ series, getAreaProps })}
-					<defs>
-						<linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="5%" stop-color="var(--color-desktop)" stop-opacity={1.0} />
-							<stop offset="95%" stop-color="var(--color-desktop)" stop-opacity={0.1} />
-						</linearGradient>
-						<linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="5%" stop-color="var(--color-mobile)" stop-opacity={0.8} />
-							<stop offset="95%" stop-color="var(--color-mobile)" stop-opacity={0.1} />
-						</linearGradient>
-					</defs>
 					<ChartClipPath
 						initialWidth={0}
 						motion={{
@@ -214,10 +223,7 @@
 						}}
 					>
 						{#each series as s, i (s.key)}
-							<Area
-								{...getAreaProps(s, i)}
-								fill={s.key === 'desktop' ? 'url(#fillDesktop)' : 'url(#fillMobile)'}
-							/>
+							<Area {...getAreaProps(s, i)} fill={s.color} />
 						{/each}
 					</ChartClipPath>
 				{/snippet}
@@ -225,7 +231,10 @@
 					<Chart.Tooltip
 						labelFormatter={(v: Date) => {
 							return v.toLocaleDateString('en-US', {
-								month: 'long'
+								month: 'short',
+								day: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit'
 							});
 						}}
 						indicator="line"
@@ -233,5 +242,5 @@
 				{/snippet}
 			</AreaChart>
 		</ChartContainer>
-	</Card.Content>
-</Card.Root>
+	</div>
+</div>

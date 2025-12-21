@@ -12,12 +12,14 @@
 		open = $bindable(false),
 		selectedType = $bindable<SupportedNotificationType>('discord'),
 		notification = null,
-		onSaved
+		onSaved,
+		onDeleted
 	}: {
 		open: boolean;
 		selectedType: SupportedNotificationType;
 		notification?: Notification | null;
 		onSaved?: (notification: Notification) => void;
+		onDeleted?: (notification: Notification) => void;
 	} = $props();
 
 	$effect(() => {
@@ -45,6 +47,7 @@
 				<DiscordForm
 					notification={notification}
 					onSaved={onSaved}
+					onDeleted={onDeleted}
 					onClose={() => {
 						open = false;
 						notification = null;
@@ -54,6 +57,7 @@
 				<TelegramForm
 					notification={notification}
 					onSaved={onSaved}
+					onDeleted={onDeleted}
 					onClose={() => {
 						open = false;
 						notification = null;

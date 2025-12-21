@@ -95,4 +95,7 @@
 			notifications = [notification, ...notifications];
 		}
 	}}
+	onDeleted={(notification: Notification) => {
+		notifications = notifications.filter((n) => n.id !== notification.id);
+	}}
 />

@@ -18,10 +18,13 @@
 	import Icon from '@iconify/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { createMonitor, updateMonitor } from '$lib/api/monitor';
+	import { createMonitor, updateMonitor, deleteMonitor } from '$lib/api/monitor';
 	import { collapseStatusCodesToRanges, normalizeStatusCodes, parseHeaders } from './utils';
 	import { intervalOptions, monitorTypeSelectData, thresholdOptions, httpMethods } from './setting';
 	import { decidedNotificationIcon } from '$lib/utils/notification';
+	import { regionFlagIcon } from '$lib/utils/region';
+	import DeleteMonitorDialog from '../delete-monitor-dialog.svelte';
+	import { toast } from 'svelte-sonner';
 
 	const httpConfigSchema = z.object({
 		url: z.url('Must be a valid URL'),
@@ -106,6 +109,8 @@
 	} = $props();
 
 	const isEdit = $derived.by(() => monitor !== null);
+	let confirmOpen = $state(false);
+	let isDeleting = $state(false);
 
 	let selectedMonitorType = $derived<MonitorType>(monitor?.type ?? 'http');
 	const foundIntervalIndex = intervalOptions.findIndex(
@@ -120,8 +125,8 @@
 	let recoveryThresholdValue = $derived<string>(
 		(monitor?.recoveryThreshold ?? Number(initialRecoveryThreshold)).toString()
 	);
-	let selectedNotificationIds = $state<string[]>(monitor?.notification ?? []);
-	let selectedRegionIds = $state<string[]>(monitor?.regions ?? []);
+	let selectedNotificationIds = $derived<string[]>(monitor?.notification ?? []);
+	let selectedRegionIds = $derived<string[]>(monitor?.regions ?? []);
 
 	const safeNotifications = $derived(notifications ?? []);
 	const notificationOptions: MultiSelectOption[] = $derived.by(() =>
@@ -325,11 +330,6 @@
 		setFields('regions', selectedRegionIds);
 	}
 
-	function regionFlagIcon(region: Region): string | null {
-		const countryCode = region.name.split('-')[0]?.trim().toLowerCase();
-		return countryCode ? `cif:${countryCode}` : null;
-	}
-
 	const failureThresholdLabel = $derived.by(() => {
 		const match = thresholdOptions.find(
 			(option) => option.value.toString() === failureThresholdValue
@@ -360,6 +360,35 @@
 	const initialPingConfig = $derived(
 		monitor?.type === 'ping' ? (initialValues.config as PingConfig) : undefined
 	);
+
+	function askDelete() {
+		if (!monitor) return;
+		confirmOpen = true;
+	}
+
+	async function handleDelete() {
+		if (!monitor) return;
+		const teamID = page.params.teamID;
+		if (!teamID) {
+			toast.error('Missing team id');
+			return;
+		}
+
+		isDeleting = true;
+		try {
+			await deleteMonitor(teamID, monitor.id);
+			toast.success('Monitor deleted');
+			await goto(`/${teamID}/monitors`);
+		} catch (error) {
+			console.error('monitor:delete:error', error);
+			const message =
+				error instanceof Error ? error.message : 'Failed to delete monitor. Please try again.';
+			toast.error(message);
+		} finally {
+			isDeleting = false;
+			confirmOpen = false;
+		}
+	}
 </script>
 
 <form use:form class="space-y-4 w-full">
@@ -549,8 +578,27 @@
 	{/if}
 
 	<div class="flex gap-2 justify-end">
+		{#if isEdit}
+			<Button
+				type="button"
+				variant="destructive"
+				disabled={$isSubmitting || isDeleting}
+				onclick={askDelete}
+			>
+				{isDeleting ? 'Deleting…' : 'Delete'}
+			</Button>
+		{/if}
 		<Button type="submit" size="default" variant="default" disabled={$isSubmitting}>
 			{$isSubmitting ? (isEdit ? 'Saving…' : 'Creating…') : isEdit ? 'Save changes' : 'Create'}
 		</Button>
 	</div>
+
+	{#if isEdit}
+		<DeleteMonitorDialog
+			bind:open={confirmOpen}
+			{monitor}
+			onConfirm={handleDelete}
+			loading={isDeleting}
+		/>
+	{/if}
 </form>

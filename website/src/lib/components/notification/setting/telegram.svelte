@@ -3,21 +3,25 @@
 	import { validator } from '@felte/validator-zod';
 	import { z } from 'zod';
 	import { page } from '$app/state';
-import { createNotification, updateNotification } from '$lib/api/notification';
+	import { createNotification, updateNotification, deleteNotification } from '$lib/api/notification';
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
 	import { Button } from '$lib/components/ui/button';
 	import * as Sheet from '$lib/components/ui/sheet';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 import type { Notification, TelegramNotificationConfig } from '../../../../types';
 
 let {
 	notification = null,
 	onSaved,
+	onDeleted,
 	onClose
 }: {
 	notification?: Notification | null;
 	onSaved?: (notification: Notification) => void;
+	onDeleted?: (notification: Notification) => void;
 	onClose: () => void;
 } = $props();
 
@@ -62,6 +66,9 @@ const initialValues: FormValues = deriveInitialValues();
 		onSubmit: handleSubmit
 	});
 
+	let deleteOpen = $state(false);
+	let isDeleting = $state(false);
+
 	function resetForm() {
 		reset();
 		setFields('name', '');
@@ -103,6 +110,29 @@ const initialValues: FormValues = deriveInitialValues();
 				err instanceof Error ? err.message : notification ? 'Failed to update notification' : 'Failed to create notification';
 			toast.error(message);
 			return { FORM_ERROR: message };
+		}
+	}
+
+	async function handleDelete() {
+		if (!notification) return;
+		const teamID = page.params.teamID;
+		if (!teamID) {
+			toast.error('Missing team id');
+			return;
+		}
+
+		isDeleting = true;
+		try {
+			await deleteNotification(teamID, notification.id);
+			toast.success('Notification deleted');
+			onDeleted?.(notification);
+			deleteOpen = false;
+			onClose();
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to delete notification';
+			toast.error(message);
+		} finally {
+			isDeleting = false;
 		}
 	}
 
@@ -150,6 +180,36 @@ $effect(() => {
 	</Field.Set>
 
 	<Sheet.Footer class="flex justify-end gap-2 mt-auto">
+		{#if notification}
+			<AlertDialog.Root bind:open={deleteOpen}>
+				<AlertDialog.Trigger>
+					<Button variant="destructive" type="button" disabled={isDeleting || $isSubmitting}>
+						{isDeleting ? 'Deleting…' : 'Delete'}
+					</Button>
+				</AlertDialog.Trigger>
+				<AlertDialog.Portal>
+					<AlertDialog.Overlay />
+					<AlertDialog.Content>
+						<AlertDialog.Header>
+							<AlertDialog.Title>Delete notification</AlertDialog.Title>
+							<AlertDialog.Description>
+								Are you sure you want to delete <strong>{notification.name}</strong>? This action cannot be undone.
+							</AlertDialog.Description>
+						</AlertDialog.Header>
+						<AlertDialog.Footer>
+							<AlertDialog.Cancel disabled={isDeleting}>Cancel</AlertDialog.Cancel>
+							<AlertDialog.Action
+								class={cn('bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+								disabled={isDeleting}
+								onclick={handleDelete}
+							>
+								{isDeleting ? 'Deleting…' : 'Delete'}
+							</AlertDialog.Action>
+						</AlertDialog.Footer>
+					</AlertDialog.Content>
+				</AlertDialog.Portal>
+			</AlertDialog.Root>
+		{/if}
 		<Button type="submit" disabled={$isSubmitting}>
 			{$isSubmitting ? (notification ? 'Saving…' : 'Creating…') : notification ? 'Save changes' : 'Create'}
 		</Button>

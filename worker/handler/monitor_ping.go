@@ -281,6 +281,9 @@ func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor
 	if openIncident == nil {
 		return false, "", nil
 	}
+	if openIncident.AutoResolve == false {
+		return false, "", nil
+	}
 
 	recoveryThreshold := int(monitor.RecoveryThreshold)
 	if recoveryThreshold <= 0 {
@@ -299,7 +302,7 @@ func (h *Handler) handleIncidentRecovery(ctx context.Context, tx pgx.Tx, monitor
 	}
 
 	allSuccessful := true
-	for i := 0; i < recoveryThreshold; i++ {
+	for i := range(recoveryThreshold) {
 		if samples[i].Status != models.PingStatusSuccessful {
 			allSuccessful = false
 			break

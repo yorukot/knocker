@@ -1757,6 +1757,155 @@
                 }
             }
         },
+        "/teams/{teamID}/status-pages": {
+            "post": {
+                "description": "Creates a status page with groups and monitors for the given team (owner/admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status_pages"
+                ],
+                "summary": "Create a status page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status page create request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/statuspage.statusPageUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/teams/{teamID}/status-pages/{id}": {
+            "put": {
+                "description": "Updates slug/icon/groups/monitors for the given status page (owner/admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status_pages"
+                ],
+                "summary": "Update a status page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status Page ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status page update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/statuspage.statusPageUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me": {
             "get": {
                 "description": "Retrieves the authenticated user's profile",
@@ -2048,6 +2197,19 @@
                 "NotificationTypeEmail"
             ]
         },
+        "models.StatusPageElementType": {
+            "type": "string",
+            "enum": [
+                "historical_timeline",
+                "current_status_indicator",
+                "none"
+            ],
+            "x-enum-varnames": [
+                "StatusPageElementTypeHistoricalTimeline",
+                "StatusPageElementTypeCurrentStatusIndicator",
+                "StatusPageElementTypeNone"
+            ]
+        },
         "monitor.createMonitorRequest": {
             "type": "object"
         },
@@ -2078,6 +2240,116 @@
                 "message": {
                     "type": "string",
                     "example": "Operation successful"
+                }
+            }
+        },
+        "statuspage.statusPageGroupInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "sort_order",
+                "type"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "type": {
+                    "enum": [
+                        "historical_timeline",
+                        "current_status_indicator",
+                        "none"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.StatusPageElementType"
+                        }
+                    ]
+                }
+            }
+        },
+        "statuspage.statusPageMonitorInput": {
+            "type": "object",
+            "required": [
+                "monitor_id",
+                "name",
+                "sort_order",
+                "type"
+            ],
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "monitor_id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "type": {
+                    "enum": [
+                        "historical_timeline",
+                        "current_status_indicator",
+                        "none"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.StatusPageElementType"
+                        }
+                    ]
+                }
+            }
+        },
+        "statuspage.statusPageUpsertRequest": {
+            "type": "object",
+            "required": [
+                "slug"
+            ],
+            "properties": {
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statuspage.statusPageGroupInput"
+                    }
+                },
+                "icon": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "monitors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statuspage.statusPageMonitorInput"
+                    }
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 3
                 }
             }
         },

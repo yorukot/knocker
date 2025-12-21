@@ -24,16 +24,16 @@ export const load: PageLoad<EditMonitorData> = async ({ params }) => {
 		getRegions()
 	]);
 
-	const monitorRaw = monitorRes.data as any;
+	const monitorRaw = monitorRes.data;
 	const monitor: Monitor = {
 		...monitorRaw,
-		teamId: monitorRaw.team_id ?? monitorRaw.teamId,
-		lastChecked: monitorRaw.last_checked ?? monitorRaw.lastChecked,
-		nextCheck: monitorRaw.next_check ?? monitorRaw.nextCheck,
-		failureThreshold: monitorRaw.failure_threshold ?? monitorRaw.failureThreshold,
-		recoveryThreshold: monitorRaw.recovery_threshold ?? monitorRaw.recoveryThreshold,
-		updatedAt: monitorRaw.updated_at ?? monitorRaw.updatedAt,
-		createdAt: monitorRaw.created_at ?? monitorRaw.createdAt
+		teamId: monitorRaw.teamId,
+		lastChecked: monitorRaw.lastChecked,
+		nextCheck: monitorRaw.nextCheck,
+		failureThreshold: monitorRaw.failureThreshold,
+		recoveryThreshold: monitorRaw.recoveryThreshold,
+		updatedAt: monitorRaw.updatedAt,
+		createdAt: monitorRaw.createdAt
 	};
 
 	return {

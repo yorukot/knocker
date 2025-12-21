@@ -3,59 +3,66 @@
 	import { validator } from '@felte/validator-zod';
 	import { z } from 'zod';
 	import { page } from '$app/state';
-import { createNotification, updateNotification } from '$lib/api/notification';
+	import { createNotification, updateNotification, deleteNotification } from '$lib/api/notification';
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
 	import { Button } from '$lib/components/ui/button';
 	import * as Sheet from '$lib/components/ui/sheet';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-import type { Notification, DiscordNotificationConfig } from '../../../../types';
+	import type { Notification, DiscordNotificationConfig } from '../../../../types';
 
-let {
-	notification = null,
-	onSaved,
-	onClose
-}: {
-	notification?: Notification | null;
-	onSaved?: (notification: Notification) => void;
-	onClose: () => void;
-} = $props();
+	let {
+		notification = null,
+		onSaved,
+		onDeleted,
+		onClose
+	}: {
+		notification?: Notification | null;
+		onSaved?: (notification: Notification) => void;
+		onDeleted?: (notification: Notification) => void;
+		onClose: () => void;
+	} = $props();
 
-const formSchema = z.object({
-	type: z.literal('discord'),
-	name: z.string().min(1, 'Name is required'),
-	config: z.object({
-		webhookUrl: z.string().url('Enter a valid webhook URL')
-	})
-});
+	const formSchema = z.object({
+		type: z.literal('discord'),
+		name: z.string().min(1, 'Name is required'),
+		config: z.object({
+			webhookUrl: z.string().url('Enter a valid webhook URL')
+		})
+	});
 
 	type FormValues = z.infer<typeof formSchema>;
 
-function deriveInitialValues(): FormValues {
-	if (notification) {
-		const cfg = notification.config as Partial<DiscordNotificationConfig> & {
-			webhook_url?: string;
-		};
+	function deriveInitialValues(): FormValues {
+		if (notification) {
+			const cfg = notification.config as Partial<DiscordNotificationConfig> & {
+				webhook_url?: string;
+			};
+			return {
+				type: 'discord',
+				name: notification.name,
+				config: { webhookUrl: cfg.webhookUrl ?? cfg.webhook_url ?? '' }
+			};
+		}
 		return {
 			type: 'discord',
-			name: notification.name,
-			config: { webhookUrl: cfg.webhookUrl ?? cfg.webhook_url ?? '' }
+			name: '',
+			config: { webhookUrl: '' }
 		};
 	}
-	return {
-		type: 'discord',
-		name: '',
-		config: { webhookUrl: '' }
-	};
-}
 
-const initialValues: FormValues = deriveInitialValues();
+	const initialValues: FormValues = deriveInitialValues();
 
 	const { form, errors, isSubmitting, setFields, reset } = createForm<FormValues>({
 		initialValues,
 		extend: validator({ schema: formSchema }),
 		onSubmit: handleSubmit
 	});
+
+	let deleteOpen = $state(false);
+	let isDeleting = $state(false);
 
 	function resetForm() {
 		reset();
@@ -100,6 +107,29 @@ async function handleSubmit(values: FormValues) {
 		}
 }
 
+	async function handleDelete() {
+		if (!notification) return;
+		const teamID = page.params.teamID;
+		if (!teamID) {
+			toast.error('Missing team id');
+			return;
+		}
+
+		isDeleting = true;
+		try {
+			await deleteNotification(teamID, notification.id);
+			toast.success('Notification deleted');
+			onDeleted?.(notification);
+			deleteOpen = false;
+			onClose();
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to delete notification';
+			toast.error(message);
+		} finally {
+			isDeleting = false;
+		}
+	}
+
 $effect(() => {
 	if (notification) {
 		setFields('name', notification.name);
@@ -140,6 +170,36 @@ $effect(() => {
 	</Field.Set>
 
 	<Sheet.Footer class="flex justify-end gap-2 mt-auto">
+		{#if notification}
+			<AlertDialog.Root bind:open={deleteOpen}>
+				<AlertDialog.Trigger>
+					<Button variant="destructive" type="button" disabled={isDeleting || $isSubmitting}>
+						{isDeleting ? 'Deleting…' : 'Delete'}
+					</Button>
+				</AlertDialog.Trigger>
+				<AlertDialog.Portal>
+					<AlertDialog.Overlay />
+					<AlertDialog.Content>
+						<AlertDialog.Header>
+							<AlertDialog.Title>Delete notification</AlertDialog.Title>
+							<AlertDialog.Description>
+								Are you sure you want to delete <strong>{notification.name}</strong>? This action cannot be undone.
+							</AlertDialog.Description>
+						</AlertDialog.Header>
+						<AlertDialog.Footer>
+							<AlertDialog.Cancel disabled={isDeleting}>Cancel</AlertDialog.Cancel>
+							<AlertDialog.Action
+								class={cn('bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+								disabled={isDeleting}
+								onclick={handleDelete}
+							>
+								{isDeleting ? 'Deleting…' : 'Delete'}
+							</AlertDialog.Action>
+						</AlertDialog.Footer>
+					</AlertDialog.Content>
+				</AlertDialog.Portal>
+			</AlertDialog.Root>
+		{/if}
 		<Button type="submit" disabled={$isSubmitting}>
 			{$isSubmitting ? (notification ? 'Saving…' : 'Creating…') : notification ? 'Save changes' : 'Create'}
 		</Button>

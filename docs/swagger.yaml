@@ -181,6 +181,16 @@ definitions:
     - NotificationTypeDiscord
     - NotificationTypeTelegram
     - NotificationTypeEmail
+  models.StatusPageElementType:
+    enum:
+    - historical_timeline
+    - current_status_indicator
+    - none
+    type: string
+    x-enum-varnames:
+    - StatusPageElementTypeHistoricalTimeline
+    - StatusPageElementTypeCurrentStatusIndicator
+    - StatusPageElementTypeNone
   monitor.createMonitorRequest:
     type: object
   monitor.updateMonitorRequest:
@@ -202,6 +212,82 @@ definitions:
       message:
         example: Operation successful
         type: string
+    type: object
+  statuspage.statusPageGroupInput:
+    properties:
+      id:
+        example: "0"
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      sort_order:
+        minimum: 0
+        type: integer
+      type:
+        allOf:
+        - $ref: '#/definitions/models.StatusPageElementType'
+        enum:
+        - historical_timeline
+        - current_status_indicator
+        - none
+    required:
+    - name
+    - sort_order
+    - type
+    type: object
+  statuspage.statusPageMonitorInput:
+    properties:
+      group_id:
+        example: "0"
+        type: string
+      id:
+        example: "0"
+        type: string
+      monitor_id:
+        example: "0"
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      sort_order:
+        minimum: 0
+        type: integer
+      type:
+        allOf:
+        - $ref: '#/definitions/models.StatusPageElementType'
+        enum:
+        - historical_timeline
+        - current_status_indicator
+        - none
+    required:
+    - monitor_id
+    - name
+    - sort_order
+    - type
+    type: object
+  statuspage.statusPageUpsertRequest:
+    properties:
+      groups:
+        items:
+          $ref: '#/definitions/statuspage.statusPageGroupInput'
+        type: array
+      icon:
+        items:
+          type: integer
+        type: array
+      monitors:
+        items:
+          $ref: '#/definitions/statuspage.statusPageMonitorInput'
+        type: array
+      slug:
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - slug
     type: object
   team.createTeamRequest:
     properties:
@@ -1399,6 +1485,107 @@ paths:
       summary: Send a test notification
       tags:
       - notifications
+  /teams/{teamID}/status-pages:
+    post:
+      consumes:
+      - application/json
+      description: Creates a status page with groups and monitors for the given team
+        (owner/admin only)
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Status page create request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/statuspage.statusPageUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create a status page
+      tags:
+      - status_pages
+  /teams/{teamID}/status-pages/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates slug/icon/groups/monitors for the given status page (owner/admin
+        only)
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Status Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status page update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/statuspage.statusPageUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Update a status page
+      tags:
+      - status_pages
   /users/me:
     get:
       description: Retrieves the authenticated user's profile
