@@ -13,5 +13,8 @@ func StatusPageRouter(api *echo.Group, repo repository.Repository) {
 
 	r := api.Group("/teams/:teamID/status-pages", middleware.AuthRequiredMiddleware)
 	r.POST("", handler.CreateStatusPage)
-	r.PUT(":id", handler.UpdateStatusPage)
+	r.GET("", handler.ListStatusPages)
+	r.GET("/:id", handler.GetStatusPage)
+	r.PUT("/:id", handler.UpdateStatusPage)
+	r.DELETE("/:id", handler.DeleteStatusPage)
 }

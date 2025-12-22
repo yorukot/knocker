@@ -16,15 +16,15 @@
 	/** @type {import('./$types').PageProps} */
 	let { data } = $props();
 
-	let incident = $state<Incident>(data.incident);
-	let events = $state<IncidentEvent[]>(data.events ?? []);
-	let monitorNames = $state<string[]>(data.monitorNames ?? []);
+	let incident = $derived<Incident>(data.incident);
+	let events = $derived<IncidentEvent[]>(data.events ?? []);
+	let monitorNames = $derived<string[]>(data.monitorNames ?? []);
 
-	let status = $state<Incident['status']>(data.incident.status);
+	let status = $derived<Incident['status']>(data.incident.status);
 	let statusMessage = $state('');
 
-	let isPublic = $state(data.incident.isPublic);
-	let autoResolve = $state(data.incident.autoResolve);
+	let isPublic = $derived(data.incident.isPublic);
+	let autoResolve = $derived(data.incident.autoResolve);
 	let isSubmittingSettings = $state(false);
 
 	let eventType = $state<IncidentEventType>('update');

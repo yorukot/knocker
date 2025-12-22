@@ -107,6 +107,7 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 	updatedPage := models.StatusPage{
 		ID:        existing.ID,
 		TeamID:    existing.TeamID,
+		Title:     req.Title,
 		Slug:      req.Slug,
 		Icon:      req.Icon,
 		CreatedAt: existing.CreatedAt,

@@ -2,11 +2,12 @@
 // Status Page Types
 // ============================================================================
 
-export type StatusPageElementType = 'historical_timeline' | 'current_status_indicator' | 'none';
+export type StatusPageElementType = 'historical_timeline' | 'current_status_indicator';
 
 export interface StatusPage {
 	id: string;
 	teamId: string;
+	title: string;
 	slug: string;
 	icon?: string; // base64 or URL depending on API usage
 	createdAt: string;
@@ -29,4 +30,10 @@ export interface StatusPageMonitor {
 	name: string;
 	type: StatusPageElementType;
 	sortOrder: number;
+}
+
+export interface StatusPageWithElements {
+	statusPage: StatusPage;
+	groups: StatusPageGroup[];
+	monitors: StatusPageMonitor[];
 }

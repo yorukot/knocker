@@ -52,6 +52,24 @@ func (m *MockRepository) GetStatusPageBySlug(ctx context.Context, tx pgx.Tx, slu
 	return page, args.Error(1)
 }
 
+func (m *MockRepository) ListStatusPagesByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.StatusPage, error) {
+	args := m.Called(ctx, tx, teamID)
+	pages, _ := args.Get(0).([]models.StatusPage)
+	return pages, args.Error(1)
+}
+
+func (m *MockRepository) ListStatusPageGroupsByStatusPageID(ctx context.Context, tx pgx.Tx, statusPageID int64) ([]models.StatusPageGroup, error) {
+	args := m.Called(ctx, tx, statusPageID)
+	groups, _ := args.Get(0).([]models.StatusPageGroup)
+	return groups, args.Error(1)
+}
+
+func (m *MockRepository) ListStatusPageMonitorsByStatusPageID(ctx context.Context, tx pgx.Tx, statusPageID int64) ([]models.StatusPageMonitor, error) {
+	args := m.Called(ctx, tx, statusPageID)
+	monitors, _ := args.Get(0).([]models.StatusPageMonitor)
+	return monitors, args.Error(1)
+}
+
 func (m *MockRepository) CreateStatusPageGroups(ctx context.Context, tx pgx.Tx, groups []models.StatusPageGroup) error {
 	args := m.Called(ctx, tx, groups)
 	return args.Error(0)
@@ -59,6 +77,11 @@ func (m *MockRepository) CreateStatusPageGroups(ctx context.Context, tx pgx.Tx, 
 
 func (m *MockRepository) CreateStatusPageMonitors(ctx context.Context, tx pgx.Tx, monitors []models.StatusPageMonitor) error {
 	args := m.Called(ctx, tx, monitors)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteStatusPage(ctx context.Context, tx pgx.Tx, teamID, statusPageID int64) error {
+	args := m.Called(ctx, tx, teamID, statusPageID)
 	return args.Error(0)
 }
 

@@ -99,6 +99,7 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 	page := models.StatusPage{
 		ID:        statusPageID,
 		TeamID:    teamID,
+		Title:     req.Title,
 		Slug:      req.Slug,
 		Icon:      req.Icon,
 		CreatedAt: now,

@@ -7,13 +7,13 @@ type StatusPageElementType string
 const (
 	StatusPageElementTypeHistoricalTimeline     StatusPageElementType = "historical_timeline"
 	StatusPageElementTypeCurrentStatusIndicator StatusPageElementType = "current_status_indicator"
-	StatusPageElementTypeNone                   StatusPageElementType = "none"
 )
 
 // StatusPage represents a public status page for a team.
 type StatusPage struct {
 	ID        int64     `json:"id,string" db:"id"`
 	TeamID    int64     `json:"team_id,string" db:"team_id"`
+	Title     string    `json:"title" db:"title"`
 	Slug      string    `json:"slug" db:"slug"`
 	Icon      []byte    `json:"icon,omitempty" db:"icon"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
