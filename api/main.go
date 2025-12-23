@@ -61,6 +61,7 @@ func routes(e *echo.Echo, repo repository.Repository) {
 	router.MonitorRouter(api, repo)
 	router.IncidentRouter(api, repo)
 	router.StatusPageRouter(api, repo)
+	router.PublicStatusPageRouter(api, repo)
 }
 
 func scalarDocsHandler() echo.HandlerFunc {

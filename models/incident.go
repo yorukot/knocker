@@ -50,6 +50,12 @@ type Incident struct {
 	UpdatedAt   time.Time        `json:"updated_at" db:"updated_at"`
 }
 
+// IncidentWithMonitorID decorates an incident with the related monitor id.
+type IncidentWithMonitorID struct {
+	Incident
+	MonitorID int64 `json:"monitor_id,string" db:"monitor_id"`
+}
+
 // IncidentMonitor links incidents to monitors.
 type IncidentMonitor struct {
 	ID         int64 `json:"id,string" db:"id"`

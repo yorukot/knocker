@@ -7,7 +7,7 @@
 	import { shapes } from '@dicebear/collection';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import type { Team } from '../../../types';
+	import type { Team } from '../../types';
 
 	const teamID = page.params.teamID;
 	let { teams }: { teams: Team[] } = $props();

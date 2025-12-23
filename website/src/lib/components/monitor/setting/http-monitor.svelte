@@ -8,7 +8,7 @@
 	import MultiSelect from '$lib/components/ui/multi-select';
 	import * as Accordion from '$lib/components/ui/accordion';
 
-	import type { BodyEncoding, HTTPMethod } from '../../../../types/monitor-config';
+	import type { BodyEncoding, HTTPMethod } from '../../../types/monitor-config';
 	import { bodyEncodingOptions, acceptedStatusOptions, httpMethods } from './setting';
 	import { condenseStatusTokens } from './utils';
 

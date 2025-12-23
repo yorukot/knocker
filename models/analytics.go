@@ -15,3 +15,11 @@ type MonitorAnalyticsBucket struct {
 	P95Ms      float64   `json:"p95_ms" db:"p95_ms"`
 	P99Ms      float64   `json:"p99_ms" db:"p99_ms"`
 }
+
+// MonitorDailySummary represents a daily aggregation for a monitor.
+type MonitorDailySummary struct {
+	MonitorID  int64     `json:"monitor_id,string" db:"monitor_id"`
+	Day        time.Time `json:"day" db:"day"`
+	TotalCount int64     `json:"total_count" db:"total_count"`
+	GoodCount  int64     `json:"good_count" db:"good_count"`
+}

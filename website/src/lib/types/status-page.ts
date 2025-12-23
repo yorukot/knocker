@@ -1,3 +1,5 @@
+import type { PublicIncident } from './incident';
+
 // ============================================================================
 // Status Page Types
 // ============================================================================
@@ -36,4 +38,43 @@ export interface StatusPageWithElements {
 	statusPage: StatusPage;
 	groups: StatusPageGroup[];
 	monitors: StatusPageMonitor[];
+}
+
+export interface PublicTimelinePoint {
+	day: string;
+	success: number;
+	fail: number;
+}
+
+export interface PublicStatusPageGroup {
+	id: string;
+	name: string;
+	type: StatusPageElementType;
+	sortOrder: number;
+	status?: 'up' | 'down';
+	uptimeSli30?: number;
+	uptimeSli60?: number;
+	uptimeSli90?: number;
+	timeline?: PublicTimelinePoint[];
+}
+
+export interface PublicStatusPageMonitor {
+	id: string;
+	monitorId: string;
+	groupId?: string | null;
+	name: string;
+	type: StatusPageElementType;
+	sortOrder: number;
+	status?: 'up' | 'down';
+	uptimeSli30?: number;
+	uptimeSli60?: number;
+	uptimeSli90?: number;
+	timeline?: PublicTimelinePoint[];
+}
+
+export interface PublicStatusPageData {
+	statusPage: StatusPage;
+	groups: PublicStatusPageGroup[];
+	monitors: PublicStatusPageMonitor[];
+	incidents: PublicIncident[];
 }

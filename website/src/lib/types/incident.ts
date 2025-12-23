@@ -35,6 +35,10 @@ export interface Incident {
 	updatedAt: string;
 }
 
+export interface PublicIncident extends Incident {
+	monitorId: string;
+}
+
 export interface IncidentMonitor {
 	id: string;
 	incidentId: string;

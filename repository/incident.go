@@ -34,6 +34,39 @@ func (r *PGRepository) GetOpenIncidentByMonitorID(ctx context.Context, tx pgx.Tx
 	return &incident, nil
 }
 
+// ListPublicIncidentsByMonitorIDs returns public incidents for the provided monitors.
+func (r *PGRepository) ListPublicIncidentsByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64) ([]models.IncidentWithMonitorID, error) {
+	if len(monitorIDs) == 0 {
+		return []models.IncidentWithMonitorID{}, nil
+	}
+
+	const query = `
+		SELECT
+			i.id,
+			i.status,
+			i.severity,
+			i.is_public,
+			i.auto_resolve,
+			i.started_at,
+			i.resolved_at,
+			i.created_at,
+			i.updated_at,
+			im.monitor_id
+		FROM incidents i
+		INNER JOIN incident_monitors im ON im.incident_id = i.id
+		WHERE im.monitor_id = ANY($1)
+		  AND i.is_public = true
+		ORDER BY i.started_at DESC, i.id DESC
+	`
+
+	var incidents []models.IncidentWithMonitorID
+	if err := pgxscan.Select(ctx, tx, &incidents, query, monitorIDs); err != nil {
+		return nil, err
+	}
+
+	return incidents, nil
+}
+
 // CreateIncident inserts a new incident row.
 func (r *PGRepository) CreateIncident(ctx context.Context, tx pgx.Tx, incident models.Incident) error {
 	const query = `

@@ -11,7 +11,7 @@
 	import { createIncidentEvent, updateIncident, updateIncidentStatus } from '$lib/api/incident';
 	import { toast } from 'svelte-sonner';
 
-	import type { Incident, IncidentEvent, IncidentEventType } from '../../../../types';
+	import type { Incident, IncidentEvent, IncidentEventType } from '../../../../lib/types/index.js';
 
 	/** @type {import('./$types').PageProps} */
 	let { data } = $props();

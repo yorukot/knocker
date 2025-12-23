@@ -1,5 +1,10 @@
-import type { StatusPage, StatusPageElementType, StatusPageWithElements } from '../../types';
-import { apiRequest } from './utils';
+import type {
+	PublicStatusPageData,
+	StatusPage,
+	StatusPageElementType,
+	StatusPageWithElements
+} from '../../types';
+import { apiRequest, publicApiRequest } from './utils';
 
 export type StatusPageListResponse = {
 	message: string;
@@ -43,6 +48,11 @@ export type StatusPageUpdateResponse = {
 
 export type StatusPageDeleteResponse = {
 	message: string;
+};
+
+export type PublicStatusPageResponse = {
+	message: string;
+	data: PublicStatusPageData;
 };
 
 export type StatusPageModelResponse = {
@@ -95,5 +105,11 @@ export function deleteStatusPage(
 	return apiRequest<StatusPageDeleteResponse>(`/teams/${teamID}/status-pages/${statusPageID}`, {
 		method: 'DELETE',
 		defaultError: 'Failed to delete status page'
+	});
+}
+
+export function getPublicStatusPage(slug: string): Promise<PublicStatusPageResponse> {
+	return publicApiRequest<PublicStatusPageResponse>(`/status-pages/${slug}`, {
+		defaultError: 'Failed to fetch status page'
 	});
 }

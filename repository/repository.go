@@ -24,6 +24,7 @@ type Repository interface {
 	ListStatusPagesByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.StatusPage, error)
 	ListStatusPageGroupsByStatusPageID(ctx context.Context, tx pgx.Tx, statusPageID int64) ([]models.StatusPageGroup, error)
 	ListStatusPageMonitorsByStatusPageID(ctx context.Context, tx pgx.Tx, statusPageID int64) ([]models.StatusPageMonitor, error)
+	ListMonitorsByIDs(ctx context.Context, tx pgx.Tx, teamID int64, monitorIDs []int64) ([]models.Monitor, error)
 	CreateStatusPageGroups(ctx context.Context, tx pgx.Tx, groups []models.StatusPageGroup) error
 	CreateStatusPageMonitors(ctx context.Context, tx pgx.Tx, monitors []models.StatusPageMonitor) error
 	DeleteStatusPage(ctx context.Context, tx pgx.Tx, teamID, statusPageID int64) error
@@ -94,6 +95,7 @@ type Repository interface {
 	GetLastEventTimeline(ctx context.Context, tx pgx.Tx, incidentID int64) (*models.EventTimeline, error)
 	ListIncidentsByMonitorID(ctx context.Context, tx pgx.Tx, monitorID int64) ([]models.Incident, error)
 	ListIncidentsByTeamID(ctx context.Context, tx pgx.Tx, teamID int64) ([]models.Incident, error)
+	ListPublicIncidentsByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64) ([]models.IncidentWithMonitorID, error)
 	GetIncidentByID(ctx context.Context, tx pgx.Tx, monitorID, incidentID int64) (*models.Incident, error)
 	GetIncidentByIDForTeam(ctx context.Context, tx pgx.Tx, teamID, incidentID int64) (*models.Incident, error)
 	ListEventTimelinesByIncidentID(ctx context.Context, tx pgx.Tx, incidentID int64) ([]models.EventTimeline, error)
@@ -104,6 +106,7 @@ type Repository interface {
 
 	// Analytics
 	GetMonitorAnalytics(ctx context.Context, tx pgx.Tx, monitorID int64, start time.Time, end time.Time, regionID *int64) ([]models.MonitorAnalyticsBucket, error)
+	ListMonitorDailySummaryByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64, start time.Time, end time.Time) ([]models.MonitorDailySummary, error)
 	ListIncidentsByMonitorIDWithinRange(ctx context.Context, tx pgx.Tx, monitorID int64, start time.Time, end time.Time) ([]models.Incident, error)
 }
 

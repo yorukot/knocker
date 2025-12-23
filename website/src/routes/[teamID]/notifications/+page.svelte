@@ -2,7 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import NotificationsList from '$lib/components/notification/list.svelte';
 	import * as Card from '$lib/components/ui/card';
-	import type { Notification, NotificationType } from '../../../types/notification';
+	import type { Notification, NotificationType } from '../../../lib/types/notification.js';
 	import { notificationTypeMeta } from '$lib/utils/notification';
 	import CreateNotificationSheet from '$lib/components/notification/setting/basic.svelte';
 

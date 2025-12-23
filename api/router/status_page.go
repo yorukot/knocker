@@ -18,3 +18,9 @@ func StatusPageRouter(api *echo.Group, repo repository.Repository) {
 	r.PUT("/:id", handler.UpdateStatusPage)
 	r.DELETE("/:id", handler.DeleteStatusPage)
 }
+
+// PublicStatusPageRouter handles public status page routes.
+func PublicStatusPageRouter(api *echo.Group, repo repository.Repository) {
+	handler := &statuspage.Handler{Repo: repo}
+	api.GET("/status-pages/:slug", handler.GetPublicStatusPage)
+}

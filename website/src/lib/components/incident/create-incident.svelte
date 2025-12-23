@@ -15,7 +15,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
 	import { createIncident } from '$lib/api/incident';
-	import type { Incident, Monitor } from '../../../types';
+	import type { Incident, Monitor } from '../../types';
 	import { toast } from 'svelte-sonner';
 
 	type FormValues = {

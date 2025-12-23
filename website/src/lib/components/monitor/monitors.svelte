@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Monitor } from '../../../types';
+	import type { Monitor } from '../../types';
 	import { Card } from '$lib/components/ui/card';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import Icon from '@iconify/svelte';

@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { FieldGroup, Field, FieldLabel, FieldDescription } from '$lib/components/ui/field';
 	import { createStatusPage } from '$lib/api/status-page';
+	import Icon from '@iconify/svelte';
 
 	const schema = z.object({
 		title: z.string().min(1, 'Title is required').max(255, 'Title is too long'),
@@ -55,14 +56,25 @@
 	}
 </script>
 
-<div class="min-h-screen px-4 flex items-center justify-center">
-	<Card.Root class="w-full max-w-md">
-		<Card.Header>
-			<Card.Title class="text-2xl">Create a status page</Card.Title>
-			<Card.Description>Start with a title and slug. You can add monitors later.</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<form use:form class="space-y-4">
+<div class="flex flex-col gap-5">
+	<header class="flex flex-col gap-3">
+		<div class="flex justify-between">
+			<div>
+				<h1 class="text-2xl font-bold">Status pages</h1>
+			</div>
+			<Button size="default" variant="ghost" href="../status-pages">
+				<Icon icon="lucide:arrow-left" />
+				Back to list
+			</Button>
+		</div>
+		<p class="text-sm text-muted-foreground">
+			Start with a title and slug. You can add monitors later.
+		</p>
+	</header>
+
+	<form use:form class="space-y-4">
+		<Card.Root class="w-full">
+			<Card.Content>
 				<FieldGroup>
 					<Field>
 						<FieldLabel for="status-page-title">Title</FieldLabel>
@@ -120,14 +132,15 @@
 							{$errors.FORM_ERROR}
 						</FieldDescription>
 					{/if}
-
-					<Field>
-						<Button type="submit" class="w-full" disabled={$isSubmitting}>
-							{$isSubmitting ? 'Creating…' : 'Create status page'}
-						</Button>
-					</Field>
 				</FieldGroup>
-			</form>
-		</Card.Content>
-	</Card.Root>
+			</Card.Content>
+		</Card.Root>
+		<div class="w-full flex justify-end">
+			<Field class="w-fit">
+				<Button type="submit" disabled={$isSubmitting}>
+					{$isSubmitting ? 'Creating…' : 'Create status page'}
+				</Button>
+			</Field>
+		</div>
+	</form>
 </div>

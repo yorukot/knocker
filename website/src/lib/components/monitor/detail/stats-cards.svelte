@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import type { MonitorAnalytics } from '../../../../types';
+	import type { MonitorAnalytics } from '../../../types';
 
 	type Props = {
 		analytics: MonitorAnalytics;

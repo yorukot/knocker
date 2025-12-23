@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { StatusPageWithElements } from '../../../types';
+	import type { StatusPageWithElements } from '../../types';
 	import { Card } from '$lib/components/ui/card';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
@@ -44,28 +44,23 @@
 	<div class="flex flex-col gap-2">
 		{#each statusPages as statusPageItem (statusPageItem.statusPage.id)}
 			<Card class="py-2 px-4">
-				<div class="flex justify-between items-start gap-2">
+				<div class="flex items-center justify-between gap-2">
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2 min-w-0">
-							<h2 class="text-md font-semibold truncate min-w-0 flex-1">
-								{statusPageItem.statusPage.title}
-							</h2>
+							<div class="min-w-0 flex-1 flex gap-2 items-center">
+								<h2 class="text-md font-semibold truncate">
+									{statusPageItem.statusPage.title}
+								</h2>
+								<a href={`/s/${statusPageItem.statusPage.slug}`} target="_blank" rel="noopener noreferrer" class="flex items-center">
+									<Icon
+										icon="lucide:external-link"
+										class="inline size-4 text-muted-foreground cursor-pointer"
+									/>
+								</a>
+							</div>
 							<Badge variant="secondary" class="rounded-sm shrink-0">
 								{statusPageItem.monitors.length} monitors
 							</Badge>
-						</div>
-
-						<div class="min-w-0">
-							{#if statusPageItem.monitors.length}
-								<p class="text-sm text-muted-foreground truncate">
-									{statusPageItem.statusPage.slug} ·
-									{statusPageItem.monitors.map((monitor) => monitor.name).join(', ')}
-								</p>
-							{:else}
-								<p class="text-sm text-muted-foreground">
-									{statusPageItem.statusPage.slug} · No monitors yet
-								</p>
-							{/if}
 						</div>
 					</div>
 					<div>
@@ -83,7 +78,10 @@
 										<Icon icon="lucide:edit" /> Edit
 									</DropdownMenu.Item>
 									<DropdownMenuSeparator />
-									<DropdownMenu.Item variant="destructive" onclick={() => requestDelete(statusPageItem)}>
+									<DropdownMenu.Item
+										variant="destructive"
+										onclick={() => requestDelete(statusPageItem)}
+									>
 										<Icon icon="lucide:trash-2" /> Delete
 									</DropdownMenu.Item>
 								</DropdownMenu.Group>

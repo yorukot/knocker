@@ -10,7 +10,7 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import MultiSelect, { type MultiSelectOption } from '$lib/components/ui/multi-select';
-	import type { Monitor, MonitorType, Notification, Region } from '../../../../types';
+	import type { Monitor, MonitorType, Notification, Region } from '../../../types';
 	import { Slider } from '$lib/components/ui/slider';
 	import * as Select from '$lib/components/ui/select';
 	import HttpMonitor from './http-monitor.svelte';

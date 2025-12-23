@@ -4,7 +4,7 @@
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator/index.js';
-  import type { Incident } from '../../../types';
+  import type { Incident } from '../../../lib/types/index.js';
   import type { IncidentWithMonitors } from './+page';
 
   /** @type {import('./$types').PageProps} */

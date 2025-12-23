@@ -11,7 +11,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-	import type { Notification, DiscordNotificationConfig } from '../../../../types';
+	import type { Notification, DiscordNotificationConfig } from '../../../types';
 
 	let {
 		notification = null,

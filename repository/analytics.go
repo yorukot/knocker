@@ -47,6 +47,34 @@ func (r *PGRepository) GetMonitorAnalytics(ctx context.Context, tx pgx.Tx, monit
 	return buckets, nil
 }
 
+// ListMonitorDailySummaryByMonitorIDs returns daily totals for monitors within a window.
+func (r *PGRepository) ListMonitorDailySummaryByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64, start time.Time, end time.Time) ([]models.MonitorDailySummary, error) {
+	if len(monitorIDs) == 0 {
+		return []models.MonitorDailySummary{}, nil
+	}
+
+	const query = `
+		SELECT
+			monitor_id,
+			time_bucket('1 day', bucket) AS day,
+			SUM(total_count) AS total_count,
+			SUM(good_count) AS good_count
+		FROM monitor_30min_summary
+		WHERE monitor_id = ANY($1)
+		  AND bucket >= $2
+		  AND bucket < $3
+		GROUP BY monitor_id, day
+		ORDER BY monitor_id, day
+	`
+
+	var summaries []models.MonitorDailySummary
+	if err := pgxscan.Select(ctx, tx, &summaries, query, monitorIDs, start, end); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
+
 // ListIncidentsByMonitorIDWithinRange returns incidents overlapping the provided window for a monitor.
 func (r *PGRepository) ListIncidentsByMonitorIDWithinRange(ctx context.Context, tx pgx.Tx, monitorID int64, start time.Time, end time.Time) ([]models.Incident, error) {
 	const query = `

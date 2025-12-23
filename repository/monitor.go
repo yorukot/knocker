@@ -76,6 +76,51 @@ func (r *PGRepository) ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, team
 	return monitors, nil
 }
 
+// ListMonitorsByIDs returns monitors by id within a team.
+func (r *PGRepository) ListMonitorsByIDs(ctx context.Context, tx pgx.Tx, teamID int64, monitorIDs []int64) ([]models.Monitor, error) {
+	if len(monitorIDs) == 0 {
+		return []models.Monitor{}, nil
+	}
+
+	query := `
+		SELECT
+			m.id,
+			m.team_id,
+			m.name,
+			m.type,
+			m.interval,
+			m.config,
+			m.last_checked,
+			m.next_check,
+			m.status,
+			m.failure_threshold,
+			m.recovery_threshold,
+			m.updated_at,
+			m.created_at,
+			COALESCE((
+				SELECT array_agg(mn.notification_id ORDER BY mn.id)
+				FROM monitor_notifications mn
+				WHERE mn.monitor_id = m.id
+			), '{}') AS notification_ids,
+			COALESCE((
+				SELECT array_agg(mr.region_id ORDER BY mr.id)
+				FROM monitor_regions mr
+				WHERE mr.monitor_id = m.id
+			), '{}') AS region_ids
+		FROM monitors m
+		WHERE m.team_id = $1
+		  AND m.id = ANY($2)
+		ORDER BY m.created_at DESC
+	`
+
+	var monitors []models.Monitor
+	if err := pgxscan.Select(ctx, tx, &monitors, query, teamID, monitorIDs); err != nil {
+		return nil, err
+	}
+
+	return monitors, nil
+}
+
 // GetMonitorByID fetches a monitor ensuring it belongs to the provided team.
 func (r *PGRepository) GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*models.Monitor, error) {
 	query := `

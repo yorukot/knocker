@@ -6,7 +6,7 @@
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import { createAvatar } from '@dicebear/core';
 	import { thumbs } from '@dicebear/collection';
-	import type { User } from '../../../types';
+	import type { User } from '../../types';
 
 	const sidebar = useSidebar();
 

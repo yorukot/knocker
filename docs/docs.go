@@ -320,6 +320,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/status-pages/{slug}": {
+            "get": {
+                "description": "Fetches a public status page by slug with computed status/timeline data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status-pages"
+                ],
+                "summary": "Get public status page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status Page Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Public status page returned",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Status page not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/teams": {
             "get": {
                 "description": "Lists teams the authenticated user is a member of",
@@ -1830,6 +1871,57 @@ const docTemplate = `{
             }
         },
         "/teams/{teamID}/status-pages": {
+            "get": {
+                "description": "Lists status pages for a team the user belongs to",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status_pages"
+                ],
+                "summary": "List status pages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status pages retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid team ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Team not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Creates a status page with groups and monitors for the given team (owner/admin only)",
                 "consumes": [
@@ -1901,6 +1993,64 @@ const docTemplate = `{
             }
         },
         "/teams/{teamID}/status-pages/{id}": {
+            "get": {
+                "description": "Fetches a status page with groups and monitors for a team the user belongs to",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status_pages"
+                ],
+                "summary": "Get a status page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status Page ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status page retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid team ID or status page ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Status page not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "description": "Updates slug/icon/groups/monitors for the given status page (owner/admin only)",
                 "consumes": [
@@ -1971,6 +2121,70 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a status page for a team (owner/admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status-pages"
+                ],
+                "summary": "Delete a status page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "teamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status Page ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status page deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid team ID or status page ID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Status page not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -2284,13 +2498,11 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "historical_timeline",
-                "current_status_indicator",
-                "none"
+                "current_status_indicator"
             ],
             "x-enum-varnames": [
                 "StatusPageElementTypeHistoricalTimeline",
-                "StatusPageElementTypeCurrentStatusIndicator",
-                "StatusPageElementTypeNone"
+                "StatusPageElementTypeCurrentStatusIndicator"
             ]
         },
         "monitor.createMonitorRequest": {
@@ -2330,7 +2542,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "name",
-                "sort_order",
                 "type"
             ],
             "properties": {
@@ -2345,13 +2556,12 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 1
                 },
                 "type": {
                     "enum": [
                         "historical_timeline",
-                        "current_status_indicator",
-                        "none"
+                        "current_status_indicator"
                     ],
                     "allOf": [
                         {
@@ -2366,7 +2576,6 @@ const docTemplate = `{
             "required": [
                 "monitor_id",
                 "name",
-                "sort_order",
                 "type"
             ],
             "properties": {
@@ -2389,13 +2598,12 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 1
                 },
                 "type": {
                     "enum": [
                         "historical_timeline",
-                        "current_status_indicator",
-                        "none"
+                        "current_status_indicator"
                     ],
                     "allOf": [
                         {
@@ -2408,7 +2616,8 @@ const docTemplate = `{
         "statuspage.statusPageUpsertRequest": {
             "type": "object",
             "required": [
-                "slug"
+                "slug",
+                "title"
             ],
             "properties": {
                 "groups": {
@@ -2433,6 +2642,11 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 3
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 }
             }
         },

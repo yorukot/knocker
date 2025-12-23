@@ -9,8 +9,8 @@
 	import { page } from '$app/state';
 	import type { Page } from '@sveltejs/kit';
 	import type { SidebarData } from './+layout';
-	import type { Monitor } from '../../types/monitor';
-	import type { MonitorAnalytics } from '../../types/analytics';
+	import type { Monitor } from '../../lib/types/monitor.js';
+	import type { MonitorAnalytics } from '../../lib/types/analytics.js';
 
 	type Crumb = {
 		label: string;

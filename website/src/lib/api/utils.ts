@@ -100,3 +100,31 @@ export async function apiRequest<T>(url: string, options: ApiOptions = {}): Prom
 
 	return normalizeResponse<T>(responseBody);
 }
+
+export async function publicApiRequest<T>(url: string, options: ApiOptions = {}): Promise<T> {
+	const { method = 'GET', body, defaultError = 'Request failed', headers } = options;
+
+	const requestInit: RequestInit = {
+		method,
+		credentials: 'omit',
+		headers: {
+			...(body ? { 'Content-Type': 'application/json' } : {}),
+			...headers
+		},
+		body: body ? JSON.stringify(body) : undefined
+	};
+
+	const res = await fetch(`${PUBLIC_API_BASE}${url}`, requestInit);
+	const responseBody = await parseJson(res);
+
+	if (!res.ok) {
+		const errorBody = responseBody as ApiErrorBody | null;
+		const message =
+			typeof errorBody?.message === 'string'
+				? `${defaultError}: ${errorBody.message}`
+				: defaultError;
+		throw new Error(message);
+	}
+
+	return normalizeResponse<T>(responseBody);
+}

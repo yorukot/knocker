@@ -4,7 +4,7 @@
 	import Icon from '@iconify/svelte';
 	import DiscordForm from './discord.svelte';
 	import TelegramForm from './telegram.svelte';
-	import type { NotificationType, Notification } from '../../../../types';
+	import type { NotificationType, Notification } from '../../../types';
 
 	type SupportedNotificationType = Extract<NotificationType, 'discord' | 'telegram'>;
 

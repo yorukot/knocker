@@ -192,12 +192,10 @@ definitions:
     enum:
     - historical_timeline
     - current_status_indicator
-    - none
     type: string
     x-enum-varnames:
     - StatusPageElementTypeHistoricalTimeline
     - StatusPageElementTypeCurrentStatusIndicator
-    - StatusPageElementTypeNone
   monitor.createMonitorRequest:
     type: object
   monitor.updateMonitorRequest:
@@ -230,7 +228,7 @@ definitions:
         minLength: 1
         type: string
       sort_order:
-        minimum: 0
+        minimum: 1
         type: integer
       type:
         allOf:
@@ -238,10 +236,8 @@ definitions:
         enum:
         - historical_timeline
         - current_status_indicator
-        - none
     required:
     - name
-    - sort_order
     - type
     type: object
   statuspage.statusPageMonitorInput:
@@ -260,7 +256,7 @@ definitions:
         minLength: 1
         type: string
       sort_order:
-        minimum: 0
+        minimum: 1
         type: integer
       type:
         allOf:
@@ -268,11 +264,9 @@ definitions:
         enum:
         - historical_timeline
         - current_status_indicator
-        - none
     required:
     - monitor_id
     - name
-    - sort_order
     - type
     type: object
   statuspage.statusPageUpsertRequest:
@@ -293,8 +287,13 @@ definitions:
         maxLength: 255
         minLength: 3
         type: string
+      title:
+        maxLength: 255
+        minLength: 1
+        type: string
     required:
     - slug
+    - title
     type: object
   team.createTeamRequest:
     properties:
@@ -529,6 +528,34 @@ paths:
       summary: List regions
       tags:
       - regions
+  /status-pages/{slug}:
+    get:
+      description: Fetches a public status page by slug with computed status/timeline
+        data
+      parameters:
+      - description: Status Page Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Public status page returned
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "404":
+          description: Status page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get public status page
+      tags:
+      - status-pages
   /teams:
     get:
       description: Lists teams the authenticated user is a member of
@@ -1540,6 +1567,40 @@ paths:
       tags:
       - notifications
   /teams/{teamID}/status-pages:
+    get:
+      description: Lists status pages for a team the user belongs to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status pages retrieved successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid team ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Team not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: List status pages
+      tags:
+      - status_pages
     post:
       consumes:
       - application/json
@@ -1588,6 +1649,89 @@ paths:
       tags:
       - status_pages
   /teams/{teamID}/status-pages/{id}:
+    delete:
+      description: Deletes a status page for a team (owner/admin only)
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Status Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status page deleted successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid team ID or status page ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Status page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Delete a status page
+      tags:
+      - status-pages
+    get:
+      description: Fetches a status page with groups and monitors for a team the user
+        belongs to
+      parameters:
+      - description: Team ID
+        in: path
+        name: teamID
+        required: true
+        type: string
+      - description: Status Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status page retrieved successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid team ID or status page ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Status page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get a status page
+      tags:
+      - status_pages
     put:
       consumes:
       - application/json

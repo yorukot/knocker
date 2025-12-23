@@ -229,6 +229,12 @@ func (m *MockRepository) ListMonitorsByTeamID(ctx context.Context, tx pgx.Tx, te
 	return monitors, args.Error(1)
 }
 
+func (m *MockRepository) ListMonitorsByIDs(ctx context.Context, tx pgx.Tx, teamID int64, monitorIDs []int64) ([]models.Monitor, error) {
+	args := m.Called(ctx, tx, teamID, monitorIDs)
+	monitors, _ := args.Get(0).([]models.Monitor)
+	return monitors, args.Error(1)
+}
+
 func (m *MockRepository) GetMonitorByID(ctx context.Context, tx pgx.Tx, teamID, monitorID int64) (*models.Monitor, error) {
 	args := m.Called(ctx, tx, teamID, monitorID)
 	monitor, _ := args.Get(0).(*models.Monitor)
@@ -338,6 +344,12 @@ func (m *MockRepository) ListIncidentsByTeamID(ctx context.Context, tx pgx.Tx, t
 	return incidents, args.Error(1)
 }
 
+func (m *MockRepository) ListPublicIncidentsByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64) ([]models.IncidentWithMonitorID, error) {
+	args := m.Called(ctx, tx, monitorIDs)
+	incidents, _ := args.Get(0).([]models.IncidentWithMonitorID)
+	return incidents, args.Error(1)
+}
+
 func (m *MockRepository) GetIncidentByID(ctx context.Context, tx pgx.Tx, monitorID, incidentID int64) (*models.Incident, error) {
 	args := m.Called(ctx, tx, monitorID, incidentID)
 	incident, _ := args.Get(0).(*models.Incident)
@@ -389,6 +401,12 @@ func (m *MockRepository) GetMonitorAnalytics(ctx context.Context, tx pgx.Tx, mon
 	args := m.Called(ctx, tx, monitorID, start, end, regionID)
 	buckets, _ := args.Get(0).([]models.MonitorAnalyticsBucket)
 	return buckets, args.Error(1)
+}
+
+func (m *MockRepository) ListMonitorDailySummaryByMonitorIDs(ctx context.Context, tx pgx.Tx, monitorIDs []int64, start time.Time, end time.Time) ([]models.MonitorDailySummary, error) {
+	args := m.Called(ctx, tx, monitorIDs, start, end)
+	summaries, _ := args.Get(0).([]models.MonitorDailySummary)
+	return summaries, args.Error(1)
 }
 
 func (m *MockRepository) ListIncidentsByMonitorIDWithinRange(ctx context.Context, tx pgx.Tx, monitorID int64, start time.Time, end time.Time) ([]models.Incident, error) {
