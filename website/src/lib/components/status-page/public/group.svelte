@@ -20,9 +20,9 @@
 	let open = $state(false);
 
 	function selectSli() {
-		if (days <= 30) return { label: '30d', value: group.uptimeSli30 };
-		if (days <= 60) return { label: '60d', value: group.uptimeSli60 };
-		return { label: '90d', value: group.uptimeSli90 };
+		if (days <= 30) return { value: group.uptimeSli30 };
+		if (days <= 60) return { value: group.uptimeSli60 };
+		return { value: group.uptimeSli90 };
 	}
 </script>
 
@@ -41,7 +41,7 @@
 		{:else}
 			{@const sli = selectSli()}
 			<span class="text-xs text-muted-foreground">
-				Uptime {sli.label} {formatSli(sli.value)}
+				Uptime {formatSli(sli.value)}
 			</span>
 		{/if}
 	</div>

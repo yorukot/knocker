@@ -13,7 +13,7 @@
 	import Icon from '@iconify/svelte';
 
 	const schema = z.object({
-		title: z.string().min(1, 'Title is required').max(255, 'Title is too long'),
+		title: z.string().min(11, 'Title is required').max(255, 'Title is too long'),
 		slug: z.string().min(3, 'Slug is required').max(255, 'Slug is too long')
 	});
 

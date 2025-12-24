@@ -6,9 +6,9 @@
 	let { monitor, days = 90 }: { monitor: PublicStatusPageMonitor; days?: number } = $props();
 
 	function selectSli() {
-		if (days <= 30) return { label: '30d', value: monitor.uptimeSli30 };
-		if (days <= 60) return { label: '60d', value: monitor.uptimeSli60 };
-		return { label: '90d', value: monitor.uptimeSli90 };
+		if (days <= 30) return { value: monitor.uptimeSli30 };
+		if (days <= 60) return { value: monitor.uptimeSli60 };
+		return { value: monitor.uptimeSli90 };
 	}
 </script>
 
@@ -24,7 +24,7 @@
 		{:else}
 			{@const sli = selectSli()}
 			<span class="text-xs text-muted-foreground">
-				Uptime {sli.label} {formatSli(sli.value)}
+				Uptime {formatSli(sli.value)}
 			</span>
 		{/if}
 	</div>

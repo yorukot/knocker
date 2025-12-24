@@ -58,6 +58,7 @@
 	"dependencies": {
 		"@dicebear/collection": "^9.2.4",
 		"@dicebear/core": "^9.2.4",
+		"@felte/reporter-svelte": "^1.2.0",
 		"@felte/validator-zod": "^1.0.18",
 		"@iconify-json/lucide": "^1.2.79",
 		"@iconify-json/ri": "^1.2.6",

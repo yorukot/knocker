@@ -14,6 +14,9 @@ importers:
       '@dicebear/core':
         specifier: ^9.2.4
         version: 9.2.4
+      '@felte/reporter-svelte':
+        specifier: ^1.2.0
+        version: 1.2.0(svelte@5.45.5)
       '@felte/validator-zod':
         specifier: ^1.0.18
         version: 1.0.18(zod@4.1.13)
@@ -585,6 +588,12 @@ packages:
   '@felte/core@1.4.4':
     resolution: {integrity: sha512-qXEofmfc0tKvd1MOP9T1ixoI4+u0ZcUtC7JpBfb2A/lr/mhc8HrkvVWGatrGBnNovTc4lgIKWOySVVFswa4BYg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  '@felte/reporter-svelte@1.2.0':
+    resolution: {integrity: sha512-FCWfezLdc7XXjtU8uAWk/r3VQktRvUFk4GYQji3DjjdOR/UQP4P1Y1xha/HAEj/Fnst5S/DipYVDzfa0DU6GZQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    peerDependencies:
+      svelte: ^3.31.0 || ^4.0.0 || ^5.0.0
 
   '@felte/validator-zod@1.0.18':
     resolution: {integrity: sha512-nLhy3qhCrL14iMxIHXtIH0MckZr/dmpqRd/KcqQ6HJoT2tjvv8gPpgOGJdOR15Wfzd25n/UUr3tyX7ydgXA5xQ==}
@@ -2559,6 +2568,11 @@ snapshots:
   '@felte/core@1.4.4':
     dependencies:
       '@felte/common': 1.1.9
+
+  '@felte/reporter-svelte@1.2.0(svelte@5.45.5)':
+    dependencies:
+      '@felte/common': 1.1.9
+      svelte: 5.45.5
 
   '@felte/validator-zod@1.0.18(zod@4.1.13)':
     dependencies:
