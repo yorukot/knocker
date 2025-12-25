@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatSli, statusMeta } from '$lib/styles/status';
-	import type { PublicStatusPageGroup, PublicStatusPageMonitor } from '$lib/types';
+	import type { PublicStatusPageElement } from '$lib/types';
 	import Icon from '@iconify/svelte';
 	import HistoricalTimeline from './historical-timeline.svelte';
 	import HistoricalMonitor from './historical-monitor.svelte';
@@ -9,11 +9,9 @@
 
 	let {
 		group,
-		monitorsByGroup,
 		days = 90
 	}: {
-		group: PublicStatusPageGroup;
-		monitorsByGroup: Record<string, PublicStatusPageMonitor[]>;
+		group: PublicStatusPageElement;
 		days?: number;
 	} = $props();
 
@@ -55,7 +53,7 @@
 			in:slide={{ duration: 200 }}
 			out:slide={{ duration: 200 }}
 		>
-			{#each monitorsByGroup[group.id] as monitor (monitor.id)}
+			{#each group.monitors as monitor (monitor.id)}
 				<HistoricalMonitor {monitor} {days} />
 			{/each}
 		</div>

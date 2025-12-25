@@ -40,11 +40,16 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	if err := validator.New().Struct(req); err != nil {
+	normalizedReq, err := normalizeStatusPageUpsert(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := validator.New().Struct(normalizedReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	if err := validateStatusPagePayload(req); err != nil {
+	if err := validateStatusPagePayload(normalizedReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -80,7 +85,7 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 	}
 
 	// ensure slug uniqueness
-	existingSlug, err := h.Repo.GetStatusPageBySlug(c.Request().Context(), tx, req.Slug)
+	existingSlug, err := h.Repo.GetStatusPageBySlug(c.Request().Context(), tx, normalizedReq.Slug)
 	if err != nil {
 		zap.L().Error("Failed to check slug uniqueness", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to check slug uniqueness")
@@ -99,9 +104,9 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 	page := models.StatusPage{
 		ID:        statusPageID,
 		TeamID:    teamID,
-		Title:     req.Title,
-		Slug:      req.Slug,
-		Icon:      req.Icon,
+		Title:     normalizedReq.Title,
+		Slug:      normalizedReq.Slug,
+		Icon:      normalizedReq.Icon,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -111,7 +116,7 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create status page")
 	}
 
-	groups, monitors, err := buildStatusPageElements(req, page.ID)
+	groups, monitors, err := buildStatusPageElements(normalizedReq, page.ID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -130,10 +135,11 @@ func (h *Handler) CreateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
+	elements := buildStatusPageElementResponses(groups, monitors)
+
 	resp := statusPageResponse{
 		StatusPage: page,
-		Groups:     groups,
-		Monitors:   monitors,
+		Elements:   elements,
 	}
 
 	return c.JSON(http.StatusOK, response.Success("Status page created successfully", resp))

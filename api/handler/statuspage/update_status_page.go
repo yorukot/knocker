@@ -41,16 +41,21 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid status page ID")
 	}
 
-	var req statusPageUpsertRequest
-	if err := c.Bind(&req); err != nil {
+	req, err := bindStatusPageUpsert(c)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	if err := validator.New().Struct(req); err != nil {
+	normalizedReq, err := normalizeStatusPageUpsert(req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := validator.New().Struct(normalizedReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	if err := validateStatusPagePayload(req); err != nil {
+	if err := validateStatusPagePayload(normalizedReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -96,7 +101,7 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 	}
 
 	// slug uniqueness (allow same slug for same record)
-	if slugOwner, err := h.Repo.GetStatusPageBySlug(c.Request().Context(), tx, req.Slug); err != nil {
+	if slugOwner, err := h.Repo.GetStatusPageBySlug(c.Request().Context(), tx, normalizedReq.Slug); err != nil {
 		zap.L().Error("Failed to check slug uniqueness", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to check slug uniqueness")
 	} else if slugOwner != nil && slugOwner.ID != existing.ID {
@@ -107,9 +112,9 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 	updatedPage := models.StatusPage{
 		ID:        existing.ID,
 		TeamID:    existing.TeamID,
-		Title:     req.Title,
-		Slug:      req.Slug,
-		Icon:      req.Icon,
+		Title:     normalizedReq.Title,
+		Slug:      normalizedReq.Slug,
+		Icon:      normalizedReq.Icon,
 		CreatedAt: existing.CreatedAt,
 		UpdatedAt: now,
 	}
@@ -123,7 +128,7 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update status page")
 	}
 
-	groups, monitors, err := buildStatusPageElements(req, page.ID)
+	groups, monitors, err := buildStatusPageElements(normalizedReq, page.ID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -152,10 +157,11 @@ func (h *Handler) UpdateStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
+	elements := buildStatusPageElementResponses(groups, monitors)
+
 	resp := statusPageResponse{
 		StatusPage: *page,
-		Groups:     groups,
-		Monitors:   monitors,
+		Elements:   elements,
 	}
 
 	return c.JSON(http.StatusOK, response.Success("Status page updated successfully", resp))

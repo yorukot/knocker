@@ -20,13 +20,29 @@ export type StatusPageUpsertRequest = {
 	title: string;
 	slug: string;
 	icon?: string | null;
-	groups: {
+	elements?: {
+		id?: string;
+		name: string;
+		type: StatusPageElementType;
+		sort_order: number;
+		monitor: boolean;
+		monitor_id?: string | null;
+		monitors?: {
+			id?: string;
+			monitor_id: string;
+			group_id?: string | null;
+			name: string;
+			type: StatusPageElementType;
+			sort_order: number;
+		}[];
+	}[];
+	groups?: {
 		id?: string;
 		name: string;
 		type: StatusPageElementType;
 		sort_order: number;
 	}[];
-	monitors: {
+	monitors?: {
 		id?: string;
 		monitor_id: string;
 		group_id?: string | null;

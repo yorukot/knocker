@@ -17,30 +17,33 @@ type publicTimelinePoint struct {
 	Fail    int64     `json:"fail"`
 }
 
-type publicStatusPageGroup struct {
-	ID        string                       `json:"id"`
-	Name      string                       `json:"name"`
-	Type      models.StatusPageElementType `json:"type"`
-	SortOrder int                          `json:"sort_order"`
-	Status    string                       `json:"status,omitempty"`
-	UptimeSLI30 float64                     `json:"uptime_sli_30,omitempty"`
-	UptimeSLI60 float64                     `json:"uptime_sli_60,omitempty"`
-	UptimeSLI90 float64                     `json:"uptime_sli_90,omitempty"`
-	Timeline  []publicTimelinePoint        `json:"timeline,omitempty"`
+type publicStatusPageMonitor struct {
+	ID          string                       `json:"id"`
+	MonitorID   string                       `json:"monitor_id"`
+	GroupID     *string                      `json:"group_id,omitempty"`
+	Name        string                       `json:"name"`
+	Type        models.StatusPageElementType `json:"type"`
+	SortOrder   int                          `json:"sort_order"`
+	Status      string                       `json:"status,omitempty"`
+	UptimeSLI30 float64                      `json:"uptime_sli_30,omitempty"`
+	UptimeSLI60 float64                      `json:"uptime_sli_60,omitempty"`
+	UptimeSLI90 float64                      `json:"uptime_sli_90,omitempty"`
+	Timeline    []publicTimelinePoint        `json:"timeline,omitempty"`
 }
 
-type publicStatusPageMonitor struct {
-	ID        string                       `json:"id"`
-	MonitorID string                       `json:"monitor_id"`
-	GroupID   *string                      `json:"group_id,omitempty"`
-	Name      string                       `json:"name"`
-	Type      models.StatusPageElementType `json:"type"`
-	SortOrder int                          `json:"sort_order"`
-	Status    string                       `json:"status,omitempty"`
-	UptimeSLI30 float64                     `json:"uptime_sli_30,omitempty"`
-	UptimeSLI60 float64                     `json:"uptime_sli_60,omitempty"`
-	UptimeSLI90 float64                     `json:"uptime_sli_90,omitempty"`
-	Timeline  []publicTimelinePoint        `json:"timeline,omitempty"`
+type publicStatusPageElement struct {
+	ID          string                       `json:"id"`
+	Name        string                       `json:"name"`
+	Type        models.StatusPageElementType `json:"type"`
+	SortOrder   int                          `json:"sort_order"`
+	Status      string                       `json:"status,omitempty"`
+	Monitor     bool                         `json:"monitor"`
+	MonitorID   *string                      `json:"monitor_id,omitempty"`
+	UptimeSLI30 float64                      `json:"uptime_sli_30,omitempty"`
+	UptimeSLI60 float64                      `json:"uptime_sli_60,omitempty"`
+	UptimeSLI90 float64                      `json:"uptime_sli_90,omitempty"`
+	Timeline    []publicTimelinePoint        `json:"timeline,omitempty"`
+	Monitors    []publicStatusPageMonitor    `json:"monitors"`
 }
 
 type publicIncidentResponse struct {
@@ -50,8 +53,7 @@ type publicIncidentResponse struct {
 
 type publicStatusPageResponse struct {
 	StatusPage models.StatusPage         `json:"status_page"`
-	Groups     []publicStatusPageGroup   `json:"groups"`
-	Monitors   []publicStatusPageMonitor `json:"monitors"`
+	Elements   []publicStatusPageElement `json:"elements"`
 	Incidents  []publicIncidentResponse  `json:"incidents"`
 }
 
@@ -160,31 +162,8 @@ func (h *Handler) GetPublicStatusPage(c echo.Context) error {
 		groupMonitorIDs[*m.GroupID] = append(groupMonitorIDs[*m.GroupID], m.MonitorID)
 	}
 
-	groupResponses := make([]publicStatusPageGroup, 0, len(groups))
-	for _, group := range groups {
-		monitorIDs := groupMonitorIDs[group.ID]
-		status := computeGroupStatus(monitorIDs, monitorByID, openPublicIncident)
-		timeline, sli30, sli60, sli90 := buildTimelineSummary(monitorIDs, days, perMonitorDaily)
-
-		responseGroup := publicStatusPageGroup{
-			ID:        formatID(group.ID),
-			Name:      group.Name,
-			Type:      group.Type,
-			SortOrder: group.SortOrder,
-			Status:    status,
-		}
-
-		if group.Type == models.StatusPageElementTypeHistoricalTimeline {
-			responseGroup.Timeline = timeline
-			responseGroup.UptimeSLI30 = sli30
-			responseGroup.UptimeSLI60 = sli60
-			responseGroup.UptimeSLI90 = sli90
-		}
-
-		groupResponses = append(groupResponses, responseGroup)
-	}
-
-	monitorResponses := make([]publicStatusPageMonitor, 0, len(monitors))
+	groupMonitorResponses := make(map[int64][]publicStatusPageMonitor, len(groups))
+	ungroupedMonitors := make([]publicStatusPageMonitor, 0)
 	for _, monitor := range monitors {
 		status := computeMonitorStatus(monitor.MonitorID, monitorByID, openPublicIncident)
 		timeline, sli30, sli60, sli90 := buildTimelineSummary([]int64{monitor.MonitorID}, days, perMonitorDaily)
@@ -212,13 +191,70 @@ func (h *Handler) GetPublicStatusPage(c echo.Context) error {
 			responseMonitor.UptimeSLI90 = sli90
 		}
 
-		monitorResponses = append(monitorResponses, responseMonitor)
+		if monitor.GroupID == nil {
+			ungroupedMonitors = append(ungroupedMonitors, responseMonitor)
+		} else {
+			groupMonitorResponses[*monitor.GroupID] = append(groupMonitorResponses[*monitor.GroupID], responseMonitor)
+		}
+	}
+
+	elements := make([]publicStatusPageElement, 0, len(groups)+len(ungroupedMonitors))
+	for _, group := range groups {
+		monitorIDs := groupMonitorIDs[group.ID]
+		status := computeGroupStatus(monitorIDs, monitorByID, openPublicIncident)
+		timeline, sli30, sli60, sli90 := buildTimelineSummary(monitorIDs, days, perMonitorDaily)
+
+		monitorList := groupMonitorResponses[group.ID]
+		if monitorList == nil {
+			monitorList = []publicStatusPageMonitor{}
+		}
+
+		responseElement := publicStatusPageElement{
+			ID:        formatID(group.ID),
+			Name:      group.Name,
+			Type:      group.Type,
+			SortOrder: group.SortOrder,
+			Status:    status,
+			Monitor:   false,
+			Monitors:  monitorList,
+		}
+
+		if group.Type == models.StatusPageElementTypeHistoricalTimeline {
+			responseElement.Timeline = timeline
+			responseElement.UptimeSLI30 = sli30
+			responseElement.UptimeSLI60 = sli60
+			responseElement.UptimeSLI90 = sli90
+		}
+
+		elements = append(elements, responseElement)
+	}
+
+	for _, monitor := range ungroupedMonitors {
+		monitorID := monitor.MonitorID
+		element := publicStatusPageElement{
+			ID:        monitor.ID,
+			Name:      monitor.Name,
+			Type:      monitor.Type,
+			SortOrder: monitor.SortOrder,
+			Status:    monitor.Status,
+			Monitor:   true,
+			MonitorID: &monitorID,
+			Monitors:  []publicStatusPageMonitor{},
+		}
+
+		if monitor.Type == models.StatusPageElementTypeHistoricalTimeline {
+			element.Timeline = monitor.Timeline
+			element.UptimeSLI30 = monitor.UptimeSLI30
+			element.UptimeSLI60 = monitor.UptimeSLI60
+			element.UptimeSLI90 = monitor.UptimeSLI90
+		}
+
+		elements = append(elements, element)
 	}
 
 	resp := publicStatusPageResponse{
 		StatusPage: *page,
-		Groups:     groupResponses,
-		Monitors:   monitorResponses,
+		Elements:   elements,
 		Incidents:  incidentResponses,
 	}
 

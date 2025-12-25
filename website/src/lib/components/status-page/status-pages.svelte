@@ -17,6 +17,13 @@
 	let deleteTarget = $state<StatusPageWithElements | null>(null);
 	let deleteLoading = $state(false);
 
+	function countMonitors(item: StatusPageWithElements) {
+		return item.elements.reduce((acc, element) => {
+			if (element.monitor) return acc + 1;
+			return acc + (element.monitors?.length ?? 0);
+		}, 0);
+	}
+
 	function requestDelete(item: StatusPageWithElements) {
 		deleteTarget = item;
 		deleteOpen = true;
@@ -59,7 +66,7 @@
 								</a>
 							</div>
 							<Badge variant="secondary" class="rounded-sm shrink-0">
-								{statusPageItem.monitors.length} monitors
+								{countMonitors(statusPageItem)} monitors
 							</Badge>
 						</div>
 					</div>

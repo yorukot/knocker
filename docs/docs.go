@@ -2538,6 +2538,52 @@ const docTemplate = `{
                 }
             }
         },
+        "statuspage.statusPageElementInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "monitor": {
+                    "type": "boolean"
+                },
+                "monitor_id": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "monitors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statuspage.statusPageMonitorInput"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "type": {
+                    "enum": [
+                        "historical_timeline",
+                        "current_status_indicator"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.StatusPageElementType"
+                        }
+                    ]
+                }
+            }
+        },
         "statuspage.statusPageGroupInput": {
             "type": "object",
             "required": [
@@ -2620,6 +2666,12 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "elements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statuspage.statusPageElementInput"
+                    }
+                },
                 "groups": {
                     "type": "array",
                     "items": {

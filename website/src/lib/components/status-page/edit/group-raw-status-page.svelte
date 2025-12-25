@@ -5,22 +5,22 @@
   import * as Select from '$lib/components/ui/select';
   import { Separator } from '$lib/components/ui/separator';
   import Icon from '@iconify/svelte';
-  import type { StatusPageGroup, StatusPageMonitor, StatusPageElementType } from '$lib/types';
+  import type { StatusPageElement, StatusPageElementType } from '$lib/types';
   import StatusPageMonitorRow from './monitor-raw-status-page.svelte';
 
   const {
     group,
-    monitors = [],
-    index,
+    namePrefix,
     onDeleteGroup,
     onDeleteMonitor
   }: {
-    group: StatusPageGroup;
-    monitors?: StatusPageMonitor[];
-    index: number;
+    group: StatusPageElement;
+    namePrefix: string;
     onDeleteGroup?: (groupId: string) => void;
     onDeleteMonitor?: (monitorId: string) => void;
   } = $props();
+
+  let typeValue = $derived<StatusPageElementType>(group.type);
 
   const typeLabel = (t: StatusPageElementType) =>
     t === 'historical_timeline' ? 'Historical Timeline' : 'Only Current Status';
@@ -33,17 +33,23 @@
   <Card.Content class="p-0">
     <div class="flex justify-between items-center p-2 gap-2">
       <InputGroup.Root class="w-full">
-        <InputGroup.Input value={group.name} placeholder="Please enter element name" />
+        <InputGroup.Input
+          name={`${namePrefix}.name`}
+          value={group.name}
+          placeholder="Please enter element name"
+        />
+        <input type="hidden" name={`${namePrefix}.monitor`} value="false" />
+        <input type="hidden" name={`${namePrefix}.sortOrder`} value={group.sortOrder} />
         <InputGroup.Addon class="hidden sm:block">
           <Icon icon="lucide:layers" />
         </InputGroup.Addon>
       </InputGroup.Root>
 
       <div class="flex items-center gap-2">
-        <Select.Root type="single" name={`groups.${index}.type`} value={group.type}>
+        <Select.Root type="single" bind:value={typeValue}>
           <Select.Trigger class="lg:w-51">
-            <Icon icon={typeIcon(group.type)} />
-            <p class="hidden lg:block">{typeLabel(group.type)}</p>
+            <Icon icon={typeIcon(typeValue)} />
+            <p class="hidden lg:block">{typeLabel(typeValue)}</p>
           </Select.Trigger>
           <Select.Content>
             <Select.Group>
@@ -56,6 +62,7 @@
             </Select.Group>
           </Select.Content>
         </Select.Root>
+        <input type="hidden" name={`${namePrefix}.type`} bind:value={typeValue} />
 
         <Button
           size="icon"
@@ -69,11 +76,15 @@
 
     <Separator />
 
-    {#if monitors.length === 0}
+    {#if (group.monitors ?? []).length === 0}
       <div class="p-2 text-sm opacity-70">No monitor yet.</div>
     {:else}
-      {#each monitors as m (m.id)}
-        <StatusPageMonitorRow monitor={m} index={index} onDelete={onDeleteMonitor} />
+      {#each group.monitors ?? [] as m, monitorIndex (m.id)}
+        <StatusPageMonitorRow
+          monitor={m}
+          namePrefix={`${namePrefix}.monitors.${monitorIndex}`}
+          onDelete={onDeleteMonitor}
+        />
       {/each}
     {/if}
   </Card.Content>

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import type { PublicStatusPageData, PublicStatusPageMonitor } from '$lib/types';
+	import type {
+		PublicStatusPageData,
+		PublicStatusPageElement,
+		PublicStatusPageMonitor
+	} from '$lib/types';
 	import HistoricalMonitor from '$lib/components/status-page/public/historical-monitor.svelte';
 	import Group from '$lib/components/status-page/public/group.svelte';
 	import { statusMeta } from '$lib/styles/status';
@@ -14,25 +18,21 @@
 	let { data }: Props = $props();
 	const statusPage = $derived(data.statusPage);
 
-	const sortedGroups = $derived.by(() =>
-		[...statusPage.groups].sort((a, b) => a.sortOrder - b.sortOrder)
+	const sortedElements = $derived.by(() =>
+		[...(statusPage.elements ?? [])].sort((a, b) => a.sortOrder - b.sortOrder)
 	);
-	const sortedMonitors = $derived.by(() =>
-		[...statusPage.monitors].sort((a, b) => a.sortOrder - b.sortOrder)
+	const groupElements = $derived.by(() => sortedElements.filter((element) => !element.monitor));
+	const ungroupedElements = $derived.by(() => sortedElements.filter((element) => element.monitor));
+
+	const ungroupedMonitors = $derived.by(() =>
+		ungroupedElements.map((element) => toPublicMonitor(element))
 	);
 
-	const monitorsByGroup = $derived.by(() => {
-		const map: Record<string, PublicStatusPageMonitor[]> = {};
-		for (const monitor of sortedMonitors) {
-			if (!monitor.groupId) continue;
-			const groupId = monitor.groupId;
-			map[groupId] = map[groupId] ?? [];
-			map[groupId].push(monitor);
-		}
-		return map;
-	});
+	const groupedMonitors = $derived.by(() =>
+		groupElements.flatMap((group) => group.monitors ?? [])
+	);
 
-	const ungroupedMonitors = $derived.by(() => sortedMonitors.filter((monitor) => !monitor.groupId));
+	const allMonitors = $derived.by(() => [...ungroupedMonitors, ...groupedMonitors]);
 
 	const openIncidents = $derived.by(() =>
 		statusPage.incidents.filter((incident) => incident.status !== 'resolved')
@@ -40,7 +40,7 @@
 
 	const overallStatus = $derived.by(() => {
 		if (openIncidents.length) return 'down';
-		return sortedMonitors.some((monitor) => monitor.status === 'down') ? 'down' : 'up';
+		return allMonitors.some((monitor) => monitor.status === 'down') ? 'down' : 'up';
 	});
 
 	let days = $state(60);
@@ -75,6 +75,22 @@
 			mqs.forEach((mq) => mq.removeEventListener('change', update));
 		};
 	});
+
+	function toPublicMonitor(element: PublicStatusPageElement): PublicStatusPageMonitor {
+		return {
+			id: element.id,
+			monitorId: element.monitorId ?? element.id,
+			groupId: null,
+			name: element.name,
+			type: element.type,
+			sortOrder: element.sortOrder,
+			status: element.status,
+			uptimeSli30: element.uptimeSli30,
+			uptimeSli60: element.uptimeSli60,
+			uptimeSli90: element.uptimeSli90,
+			timeline: element.timeline
+		};
+	}
 </script>
 
 <div class="min-h-screen bg-muted/30">
@@ -97,7 +113,7 @@
 		</header>
 
 		<section class="flex flex-col gap-4">
-			{#if sortedGroups.length === 0 && ungroupedMonitors.length === 0}
+			{#if groupElements.length === 0 && ungroupedMonitors.length === 0}
 				<Card.Root class="p-6 text-sm text-muted-foreground">
 					No monitors are configured for this status page yet.
 				</Card.Root>
@@ -109,8 +125,8 @@
 				{/each}
 			{/if}
 
-			{#each sortedGroups as group (group.id)}
-				<Group {group} {monitorsByGroup} {days} />
+			{#each groupElements as group (group.id)}
+				<Group {group} {days} />
 			{/each}
 		</section>
 	</div>

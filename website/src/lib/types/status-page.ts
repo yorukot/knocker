@@ -34,10 +34,20 @@ export interface StatusPageMonitor {
 	sortOrder: number;
 }
 
+export interface StatusPageElement {
+	id: string;
+	statusPageId: string;
+	name: string;
+	type: StatusPageElementType;
+	sortOrder: number;
+	monitor: boolean;
+	monitorId?: string | null;
+	monitors: StatusPageMonitor[];
+}
+
 export interface StatusPageWithElements {
 	statusPage: StatusPage;
-	groups: StatusPageGroup[];
-	monitors: StatusPageMonitor[];
+	elements: StatusPageElement[];
 }
 
 export interface PublicTimelinePoint {
@@ -72,9 +82,23 @@ export interface PublicStatusPageMonitor {
 	timeline?: PublicTimelinePoint[];
 }
 
+export interface PublicStatusPageElement {
+	id: string;
+	name: string;
+	type: StatusPageElementType;
+	sortOrder: number;
+	status?: 'up' | 'down';
+	monitor: boolean;
+	monitorId?: string | null;
+	uptimeSli30?: number;
+	uptimeSli60?: number;
+	uptimeSli90?: number;
+	timeline?: PublicTimelinePoint[];
+	monitors: PublicStatusPageMonitor[];
+}
+
 export interface PublicStatusPageData {
 	statusPage: StatusPage;
-	groups: PublicStatusPageGroup[];
-	monitors: PublicStatusPageMonitor[];
+	elements: PublicStatusPageElement[];
 	incidents: PublicIncident[];
 }

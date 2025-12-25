@@ -94,10 +94,11 @@ func (h *Handler) GetStatusPage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to commit transaction")
 	}
 
+	elements := buildStatusPageElementResponses(groups, monitors)
+
 	resp := statusPageResponse{
 		StatusPage: *page,
-		Groups:     groups,
-		Monitors:   monitors,
+		Elements:   elements,
 	}
 
 	return c.JSON(http.StatusOK, response.Success("Status page retrieved successfully", resp))

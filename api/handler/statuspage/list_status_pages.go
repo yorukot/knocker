@@ -82,10 +82,11 @@ func (h *Handler) ListStatusPages(c echo.Context) error {
 			monitors = []models.StatusPageMonitor{}
 		}
 
+		elements := buildStatusPageElementResponses(groups, monitors)
+
 		responses = append(responses, statusPageResponse{
 			StatusPage: page,
-			Groups:     groups,
-			Monitors:   monitors,
+			Elements:   elements,
 		})
 	}
 

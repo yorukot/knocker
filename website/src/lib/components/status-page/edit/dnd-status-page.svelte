@@ -3,66 +3,66 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import Icon from '@iconify/svelte';
+	import type { createForm } from 'felte';
 
-	import type {
-		MonitorWithIncidents,
-		StatusPageGroup,
-		StatusPageMonitor,
-		StatusPageWithElements
-	} from '$lib/types';
+	import type { MonitorWithIncidents, StatusPageElement, StatusPageMonitor } from '$lib/types';
 
 	import StatusPageMonitorCard from './monitor-raw-status-page.svelte';
 	import StatusPageGroupCard from './group-raw-status-page.svelte';
+	import type { StatusPageUpsertValues } from './schema';
+
+	type FelteReturn = ReturnType<typeof createForm<StatusPageUpsertValues>>;
+	type SetFields = FelteReturn['setFields'];
 
 	let monitorID = $state('');
 	let groupID = $state('');
 
 	let {
-		monitors,
-		statusPage
-	}: { monitors: MonitorWithIncidents[]; statusPage: StatusPageWithElements } = $props();
+		availableMonitors,
+		statusPageId,
+		elements,
+		setFields
+	}: {
+		availableMonitors: MonitorWithIncidents[];
+		statusPageId: string;
+		elements: StatusPageElement[];
+		setFields: SetFields;
+	} = $props();
+
+	const sortByOrder = (
+		a: { sortOrder: number; id: string },
+		b: { sortOrder: number; id: string }
+	) => {
+		const diff = a.sortOrder - b.sortOrder;
+		if (diff !== 0) return diff;
+		return a.id.localeCompare(b.id);
+	};
+
+	function normalizeElements(list: StatusPageElement[]) {
+		return list
+			.map((element) => ({
+				...element,
+				monitors: (element.monitors ?? []).slice().sort(sortByOrder)
+			}))
+			.sort(sortByOrder);
+	}
+
+	let editableElements = $derived(normalizeElements(structuredClone(elements ?? [])));
 
 	const monitorTriggerContent = $derived(
-		monitors.find((m) => m.id === monitorID)?.name ?? 'Select a monitor'
+		availableMonitors.find((m) => m.id === monitorID)?.name ?? 'Select a monitor'
 	);
 
 	const groupTriggerContent = $derived(
-		statusPage.groups.find((g) => g.id === groupID)?.name ?? 'Ungrouped'
+		editableElements.find((g) => !g.monitor && g.id === groupID)?.name ?? 'Ungrouped'
 	);
 
-	export type DndFatherElement =
-		| (StatusPageGroup & { kind: 'group' })
-		| (StatusPageMonitor & { kind: 'monitor' });
-
-	const dndFatherElements = $derived.by((): DndFatherElement[] => {
-		const groupItems: DndFatherElement[] = statusPage.groups.map((g) => ({
-			...g,
-			kind: 'group' as const
-		}));
-
-		const ungroupedMonitorItems: DndFatherElement[] = statusPage.monitors
-			.filter((m) => m.groupId == null || m.groupId === '')
-			.map((m) => ({ ...m, kind: 'monitor' as const }));
-
-		return [...groupItems, ...ungroupedMonitorItems].sort((a, b) => {
-			const d = a.sortOrder - b.sortOrder;
-			if (d !== 0) return d;
-			return a.id.localeCompare(b.id);
-		});
-	});
-
-	function isMonitor(el: DndFatherElement): el is StatusPageMonitor & { kind: 'monitor' } {
-		return el.kind === 'monitor';
+	function updateElements(next: StatusPageElement[]) {
+		const normalized = normalizeElements(next);
+		editableElements = normalized;
+		setFields('elements', normalized, true);
 	}
 
-	function getMonitorsInGroup(groupId: string) {
-		return statusPage.monitors
-			.filter((m) => m.groupId === groupId)
-			.slice()
-			.sort((a, b) => a.sortOrder - b.sortOrder);
-	}
-
-	// TODO: 下面這些你自己接 API 或更新 state
 	const onDeleteMonitor = (id: string) => {
 		console.log('delete monitor element', id);
 	};
@@ -75,10 +75,77 @@
 		console.log('delete monitor in group', id);
 	};
 
-	const onAddElement = () => {
-		// 你上面選了 monitorID + groupID 之後點 + 會新增 element
-		console.log('add element', { monitorID, groupID });
+	function nextTopLevelSortOrder() {
+		const max = editableElements.reduce((acc, element) => Math.max(acc, element.sortOrder ?? 0), 0);
+		return max + 1;
+	}
+
+	function nextSortOrderInGroup(groupId: string) {
+		const group = editableElements.find((element) => !element.monitor && element.id === groupId);
+		const list = group?.monitors ?? [];
+		const max = list.reduce((acc, m) => Math.max(acc, m.sortOrder ?? 0), 0);
+		return max + 1;
+	}
+
+	const onAddMonitor = () => {
+		if (!monitorID) return;
+
+		const targetGroupId = groupID === '0' || groupID === '' ? null : groupID;
+
+		if (!targetGroupId) {
+			const newElement: StatusPageElement = {
+				id: crypto.randomUUID(),
+				statusPageId,
+				name: availableMonitors.find((m) => m.id === monitorID)?.name ?? 'New Monitor',
+				type: 'historical_timeline',
+				sortOrder: nextTopLevelSortOrder(),
+				monitor: true,
+				monitorId: monitorID,
+				monitors: []
+			};
+
+			updateElements([...editableElements, newElement]);
+		} else {
+			updateElements(
+				editableElements.map((element) => {
+					if (element.monitor || element.id !== targetGroupId) return element;
+					const nextMonitor: StatusPageMonitor = {
+						id: crypto.randomUUID(),
+						statusPageId,
+						monitorId: monitorID,
+						groupId: targetGroupId,
+						name: availableMonitors.find((m) => m.id === monitorID)?.name ?? 'New Monitor',
+						type: 'historical_timeline',
+						sortOrder: nextSortOrderInGroup(targetGroupId)
+					};
+					return {
+						...element,
+						monitors: [...(element.monitors ?? []), nextMonitor]
+					};
+				})
+			);
+		}
+
+		monitorID = '';
+		groupID = '';
 	};
+
+	const onAddGroup = () => {
+		const newGroup: StatusPageElement = {
+			id: crypto.randomUUID(),
+			statusPageId,
+			name: 'New Group',
+			type: 'historical_timeline',
+			sortOrder: nextTopLevelSortOrder(),
+			monitor: false,
+			monitorId: null,
+			monitors: []
+		};
+
+		updateElements([...editableElements, newGroup]);
+	};
+	
+	
 </script>
 
 <Card.Root>
@@ -95,7 +162,7 @@
 				<Select.Content>
 					<Select.Group>
 						<Select.Label>Monitors</Select.Label>
-						{#each monitors as monitor (monitor.id)}
+						{#each availableMonitors as monitor (monitor.id)}
 							<Select.Item value={monitor.id} label={monitor.name}>
 								{monitor.name}
 							</Select.Item>
@@ -111,7 +178,7 @@
 						<Select.Group>
 							<Select.Label>Groups</Select.Label>
 							<Select.Item value="0" label="Ungrouped">Ungrouped</Select.Item>
-							{#each statusPage.groups as group (group.id)}
+							{#each editableElements.filter((element) => !element.monitor) as group (group.id)}
 								<Select.Item value={group.id} label={group.name}>
 									{group.name}
 								</Select.Item>
@@ -120,7 +187,7 @@
 					</Select.Content>
 				</Select.Root>
 
-				<Button size="icon" onclick={onAddElement}>
+				<Button size="icon" onclick={onAddMonitor}>
 					<Icon icon="lucide:plus" />
 				</Button>
 			</div>
@@ -128,16 +195,20 @@
 
 		<!-- elements list -->
 		<div class="flex flex-col gap-2">
-			{#each dndFatherElements as fatherElement, i (fatherElement.id)}
-				{#if isMonitor(fatherElement)}
+			{#each editableElements as element, i (element.id)}
+				{#if element.monitor}
 					<Card.Root class="bg-muted p-0">
-						<StatusPageMonitorCard monitor={fatherElement} index={i} onDelete={onDeleteMonitor} />
+						<StatusPageMonitorCard
+							monitor={element}
+							namePrefix={`elements.${i}`}
+							isElement
+							onDelete={onDeleteMonitor}
+						/>
 					</Card.Root>
 				{:else}
 					<StatusPageGroupCard
-						group={fatherElement}
-						index={i}
-						monitors={getMonitorsInGroup(fatherElement.id)}
+						group={element}
+						namePrefix={`elements.${i}`}
 						{onDeleteGroup}
 						onDeleteMonitor={onDeleteMonitorInGroup}
 					/>
@@ -145,11 +216,11 @@
 			{/each}
 		</div>
 
-		<div class="flex justify-end">
-			<Button>
-				<Icon icon="lucide:plus" />
-				New Group
-			</Button>
+			<div class="flex justify-end">
+				<Button onclick={onAddGroup}>
+					<Icon icon="lucide:plus" />
+					New Group
+				</Button>
 		</div>
 	</Card.Content>
 </Card.Root>

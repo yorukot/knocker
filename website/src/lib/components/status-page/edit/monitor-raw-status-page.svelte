@@ -3,17 +3,21 @@
 	import * as InputGroup from '$lib/components/ui/input-group';
 	import * as Select from '$lib/components/ui/select';
 	import Icon from '@iconify/svelte';
-	import type { StatusPageMonitor, StatusPageElementType } from '$lib/types';
+	import type { StatusPageElement, StatusPageMonitor, StatusPageElementType } from '$lib/types';
 
 	const {
 		monitor,
-		index,
+		namePrefix,
+		isElement = false,
 		onDelete
 	}: {
-		monitor: StatusPageMonitor;
-		index: number;
+		monitor: StatusPageMonitor | StatusPageElement;
+		namePrefix: string;
+		isElement?: boolean;
 		onDelete?: (monitorId: string) => void;
 	} = $props();
+
+	let typeValue = $derived<StatusPageElementType>(monitor.type);
 
 	const typeLabel = (t: StatusPageElementType) =>
 		t === 'historical_timeline' ? 'Historical Timeline' : 'Only Current Status';
@@ -24,17 +28,28 @@
 
 <div class="flex justify-between items-center p-2 gap-2">
 	<InputGroup.Root class="w-full">
-		<InputGroup.Input value={monitor.name} placeholder="Please enter element name" />
+		<InputGroup.Input
+			name={`${namePrefix}.name`}
+			value={monitor.name}
+			placeholder="Please enter element name"
+		/>
+		<input type="hidden" name={`${namePrefix}.sortOrder`} value={monitor.sortOrder} />
+		{#if isElement}
+			<input type="hidden" name={`${namePrefix}.monitor`} value="true" />
+		{/if}
+		{#if monitor.monitorId}
+			<input type="hidden" name={`${namePrefix}.monitorId`} value={monitor.monitorId} />
+		{/if}
 		<InputGroup.Addon class="hidden sm:block">
 			<Icon icon="lucide:activity" />
 		</InputGroup.Addon>
 	</InputGroup.Root>
 
 	<div class="flex items-center gap-2">
-		<Select.Root type="single" name={`monitors.${index}.type`}  value={monitor.type}>
+		<Select.Root type="single" bind:value={typeValue}>
 			<Select.Trigger class="lg:w-51">
-				<Icon icon={typeIcon(monitor.type)} />
-				<p class="hidden lg:block">{typeLabel(monitor.type)}</p>
+				<Icon icon={typeIcon(typeValue)} />
+				<p class="hidden lg:block">{typeLabel(typeValue)}</p>
 			</Select.Trigger>
 			<Select.Content>
 				<Select.Group>
@@ -47,6 +62,7 @@
 				</Select.Group>
 			</Select.Content>
 		</Select.Root>
+		<input type="hidden" name={`${namePrefix}.type`} bind:value={typeValue} />
 
 		<Button size="icon" variant="destructive" onclick={() => onDelete?.(monitor.id)}>
 			<Icon icon="lucide:trash" />

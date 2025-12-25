@@ -218,6 +218,37 @@ definitions:
         example: Operation successful
         type: string
     type: object
+  statuspage.statusPageElementInput:
+    properties:
+      id:
+        example: "0"
+        type: string
+      monitor:
+        type: boolean
+      monitor_id:
+        example: "0"
+        type: string
+      monitors:
+        items:
+          $ref: '#/definitions/statuspage.statusPageMonitorInput'
+        type: array
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      sort_order:
+        minimum: 1
+        type: integer
+      type:
+        allOf:
+        - $ref: '#/definitions/models.StatusPageElementType'
+        enum:
+        - historical_timeline
+        - current_status_indicator
+    required:
+    - name
+    - type
+    type: object
   statuspage.statusPageGroupInput:
     properties:
       id:
@@ -271,6 +302,10 @@ definitions:
     type: object
   statuspage.statusPageUpsertRequest:
     properties:
+      elements:
+        items:
+          $ref: '#/definitions/statuspage.statusPageElementInput'
+        type: array
       groups:
         items:
           $ref: '#/definitions/statuspage.statusPageGroupInput'
