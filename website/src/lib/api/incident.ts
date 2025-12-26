@@ -1,5 +1,5 @@
-import type { Incident } from '../../types';
-import type { IncidentEvent, IncidentEventType } from '../../types/incident';
+import type { Incident } from '$lib/types';
+import type { IncidentEvent, IncidentEventType } from '$lib/types/incident';
 import { apiRequest } from './utils';
 
 export type IncidentsResponse = {
